@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Afstand">
+<meta name="theme-color" content="#1D3FA8">
+<title>Afstand</title>
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<style>
+:root{
+  color-scheme: light;
+  --ink:#16241C; --muted:#5B6A61; --surface:#FFFFFF; --surface-2:#EDF1EA; --line:#D9E0D5;
+  --fries:#1D3FA8; --pompe:#C8102E; --polder:#2F6B3F; --amber:#C98A12; --road:#8E9690;
+  --peat:#8B5E34; --slate:#4F5A66; --unknown:#C5CCC4;
+  --shadow:0 -8px 28px rgba(10,30,20,.16);
+  --font:"Schibsted Grotesk",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{ color-scheme: dark; --ink:#E6EEE8; --muted:#9BAAA1; --surface:#141C17; --surface-2:#1F2A23; --line:#2C3931;
+    --road:#7D8680; --unknown:#4A564E; --shadow:0 -8px 28px rgba(0,0,0,.5); }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--font);color:var(--ink);background:var(--surface);overflow:hidden;position:fixed;inset:0;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outline-offset:2px}
+#map{position:absolute;inset:0;background:#e9e6df}
+.leaflet-container{font-family:var(--font)}
+.leaflet-top{top:env(safe-area-inset-top,0px)}
+.leaflet-control-attribution{font-size:10px}
+
+.fab{position:absolute;left:12px;z-index:500;width:44px;height:44px;border-radius:50%;border:0;background:var(--surface);
+  color:var(--ink);box-shadow:0 2px 10px rgba(0,0,0,.22);display:grid;place-items:center;cursor:pointer}
+.fab svg{width:22px;height:22px}
+#locate{top:calc(env(safe-area-inset-top,0px) + 12px)}
+#home{top:calc(env(safe-area-inset-top,0px) + 64px)}
+
+#status{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 16px);z-index:600;
+  background:var(--ink);color:var(--surface);font-size:13px;font-weight:500;padding:8px 14px;border-radius:999px;
+  display:flex;gap:8px;align-items:center;white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+#status[hidden]{display:none}
+.spin{width:12px;height:12px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#toast{position:absolute;left:16px;right:16px;bottom:320px;z-index:800;background:var(--ink);color:var(--surface);
+  font-size:14px;line-height:1.35;padding:11px 14px;border-radius:12px;opacity:0;transform:translateY(6px);
+  transition:opacity .2s,transform .2s;pointer-events:none;max-width:420px;margin:0 auto}
+#toast.show{opacity:1;transform:none}
+
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:700;background:var(--surface);border-radius:22px 22px 0 0;
+  box-shadow:var(--shadow);padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 10px);max-height:80vh;overflow-y:auto;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+@media (min-width:720px){ #sheet{left:16px;right:auto;bottom:16px;width:380px;border-radius:22px;padding-bottom:12px} #toast{left:16px;right:auto;width:380px;margin:0} }
+
+.modes{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.modes button{border:0;background:transparent;border-radius:9px;padding:9px 4px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer}
+.modes button[aria-checked="true"]{background:var(--fries);color:#fff}
+
+.readout{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;min-height:62px;padding:12px 2px 8px}
+#hint{margin:0;font-size:17px;line-height:1.35;font-weight:500;color:var(--ink);align-self:center}
+.dist{font-size:46px;line-height:.95;font-weight:700;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+.dist small{font-size:20px;font-weight:600;letter-spacing:0;color:var(--muted);margin-left:5px}
+.time{text-align:right;padding-bottom:2px}
+.time b{display:block;font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.time span{display:block;font-size:13px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+.bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--surface-2);gap:2px}
+.bar span{flex-basis:0;min-width:3px}
+#miniBar{margin:2px 2px 12px}
+
+.actions{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.actions button{border:0;background:var(--surface-2);border-radius:12px;padding:8px 2px 7px;display:flex;flex-direction:column;
+  align-items:center;gap:3px;font-size:12px;font-weight:500;cursor:pointer}
+.actions svg{width:21px;height:21px}
+.actions button:disabled{opacity:.35;cursor:default}
+#clear.armed{background:var(--pompe);color:#fff}
+
+#moreBtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:0;background:transparent;
+  padding:12px 0 4px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+#moreBtn svg{width:16px;height:16px;transition:transform .2s}
+#moreBtn[aria-expanded="true"] svg{transform:rotate(180deg)}
+
+.group{border-top:1px solid var(--line);padding:6px 0 10px}
+.group h3{font-size:14px;font-weight:600;margin:12px 0 6px;color:var(--ink)}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;cursor:pointer}
+.switch b{display:block;font-weight:500;font-size:16px}
+.switch small{display:block;color:var(--muted);font-size:13px;margin-top:1px}
+.switch input{position:absolute;opacity:0;pointer-events:none}
+.switch i{flex:none;width:48px;height:29px;border-radius:15px;background:var(--unknown);position:relative;transition:background .2s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.switch input:checked+i{background:var(--polder)}
+.switch input:checked+i::after{transform:translateX(19px)}
+.note{font-size:13px;line-height:1.4;color:var(--muted);margin:4px 0 0}
+
+.stepper{display:flex;align-items:center;gap:10px}
+.stepper button{border:0;background:var(--surface-2);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;min-width:64px}
+.stepper output{flex:1;text-align:center;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.legend{list-style:none;margin:8px 0 4px;padding:0;display:grid;gap:5px}
+.legend li{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center;font-size:14px}
+.legend i{width:10px;height:10px;border-radius:3px}
+.legend b{font-weight:600;font-variant-numeric:tabular-nums}
+.legend em{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.foot{font-size:12px;line-height:1.45;color:var(--muted);margin:10px 0 2px}
+.link{border:0;background:none;padding:0;color:var(--fries);text-decoration:underline;font-size:12px;cursor:pointer}
+@media (prefers-color-scheme: dark){ .link{color:#8FA8F0} }
+
+.wp{display:grid;place-items:center}
+.wp i{display:block}
+.wp-mid i{width:15px;height:15px;border-radius:50%;background:#fff;border:3px solid var(--fries);box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.wp-end i{width:22px;height:22px;border-radius:50%;background:var(--fries);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);
+  display:grid;place-items:center}
+.wp-end i::after{content:"";width:6px;height:6px;border-radius:50%;background:#fff}
+.wp-start svg{width:30px;height:30px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.wp-pending i{opacity:.5}
+.leaflet-popup-content-wrapper{border-radius:12px}
+.leaflet-popup-content{margin:8px}
+.pop-del{border:0;background:var(--pompe);color:#fff;font-weight:600;font-size:14px;border-radius:9px;padding:9px 12px;cursor:pointer}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important;animation-duration:2s!important} }
+</style>
+</head>
+<body>
+<div id="map" role="application" aria-label="Kaart. Tik om een punt toe te voegen."></div>
+
+<button class="fab" id="locate" aria-label="Naar mijn locatie">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+</button>
+<button class="fab" id="home" aria-label="Terug naar Garyp">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg>
+</button>
+
+<div id="status" hidden role="status"><span class="spin" aria-hidden="true"></span><span id="statusText">Bezig…</span></div>
+<div id="toast" role="alert"></div>
+
+<section id="sheet" aria-label="Route">
+  <div class="modes" role="radiogroup" aria-label="Activiteit">
+    <button role="radio" data-mode="wandelen">Wandelen</button>
+    <button role="radio" data-mode="hardlopen">Hardlopen</button>
+    <button role="radio" data-mode="trail">Trailrunning</button>
+  </div>
+
+  <div class="readout">
+    <p id="hint">Tik op de kaart om je startpunt te kiezen.</p>
+    <div class="dist" id="distBox" hidden><span id="distVal">0,00</span><small id="distUnit">km</small></div>
+    <div class="time" id="timeBox" hidden><b id="timeVal">0 min</b><span id="paceVal">12:00 per km</span></div>
+  </div>
+  <div class="bar" id="miniBar" aria-hidden="true" hidden></div>
+
+  <div class="actions">
+    <button id="undo" aria-label="Laatste punt ongedaan maken">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      <span>Ongedaan</span>
+    </button>
+    <button id="loop" aria-label="Route terug naar startpunt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/></svg>
+      <span>Rondje</span>
+    </button>
+    <button id="gpx" aria-label="Route delen als GPX-bestand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>
+      <span>GPX</span>
+    </button>
+    <button id="clear" aria-label="Route wissen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m6 6 1 14h10l1-14"/></svg>
+      <span id="clearLabel">Wissen</span>
+    </button>
+  </div>
+
+  <button id="moreBtn" aria-expanded="false" aria-controls="more">
+    Opties en details
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+
+  <div id="more" hidden>
+    <div class="group">
+      <h3>Route</h3>
+      <label class="switch"><span><b>Paden en wegen volgen</b><small>Uit: rechte lijnen tussen je punten</small></span><input type="checkbox" id="optFollow"><i></i></label>
+      <label class="switch"><span><b>Verharde paden</b><small>Asfalt, klinkers, beton</small></span><input type="checkbox" id="optPaved"><i></i></label>
+      <label class="switch"><span><b>Onverharde paden</b><small>Gras, zand, grind, schelpen</small></span><input type="checkbox" id="optUnpaved"><i></i></label>
+      <p class="note">Uitgezet betekent: zoveel mogelijk vermijden. De route kiest eerst wandelpaden, dan fietspaden, dan overige wegen.</p>
+    </div>
+    <div class="group">
+      <h3 id="paceTitle">Tempo bij wandelen</h3>
+      <div class="stepper">
+        <button id="paceMinus" aria-label="Tempo 15 seconden per km sneller">−15 s</button>
+        <output id="paceOut">12:00 per km</output>
+        <button id="pacePlus" aria-label="Tempo 15 seconden per km langzamer">+15 s</button>
+      </div>
+    </div>
+    <div class="group">
+      <h3>Wegtype</h3>
+      <div class="bar" id="barCat"></div>
+      <ul class="legend" id="legCat"></ul>
+      <h3>Ondergrond</h3>
+      <div class="bar" id="barSurf"></div>
+      <ul class="legend" id="legSurf"></ul>
+    </div>
+    <p class="foot">Kaart en paden: © OpenStreetMap-bijdragers. Afstanden en tijden zijn een schatting.
+      Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
+      <button class="link" id="clearCache">Opgeslagen kaartdata wissen</button></p>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+'use strict';
+const EARTH_R = 6371008.8;
+function hav(lat1, lon1, lat2, lon2) {
+  const k = Math.PI / 180;
+  const dLat = (lat2 - lat1) * k, dLon = (lon2 - lon1) * k;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * k) * Math.cos(lat2 * k) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+const PAVED = new Set(['asphalt', 'paved', 'concrete', 'concrete:plates', 'concrete:lanes', 'paving_stones',
+  'paving_stones:30', 'paving_stones:20', 'sett', 'cobblestone', 'unhewn_cobblestone', 'bricks', 'metal', 'wood',
+  'chipseal', 'stone', 'tiles', 'rubber', 'tartan', 'acrylic', 'brick', 'clinker']);
+const UNPAVED = new Set(['unpaved', 'gravel', 'fine_gravel', 'compacted', 'dirt', 'earth', 'ground', 'grass', 'sand',
+  'mud', 'pebblestone', 'woodchips', 'grass_paver', 'shells', 'rock', 'rocks', 'clay', 'soil', 'forest_floor', 'dirt/sand']);
+const BIG_ROADS = new Set(['primary', 'primary_link', 'secondary', 'secondary_link']);
+const NO_HW = new Set(['motorway', 'motorway_link', 'trunk', 'trunk_link', 'construction', 'proposed', 'raceway',
+  'bus_guideway', 'platform', 'elevator', 'abandoned', 'disused', 'services', 'rest_area', 'busway', 'corridor', 'via_ferrata']);
+const KEEP_TAGS = ['highway', 'surface', 'tracktype', 'foot', 'access', 'bicycle', 'area'];
+
+// Returns null when the way is not walkable, otherwise its routing class.
+function classifyWay(t) {
+  const hw = t.highway;
+  if (!hw || NO_HW.has(hw) || t.area === 'yes') return null;
+  const foot = t.foot;
+  if (foot === 'no' || foot === 'private' || foot === 'use_sidepath') return null;
+  const footOk = foot === 'yes' || foot === 'designated' || foot === 'permissive';
+  if (!footOk && (t.access === 'no' || t.access === 'private')) return null;
+  if (hw === 'bridleway' && !footOk) return null;
+
+  let cat;
+  if (hw === 'cycleway') cat = 'fiets';
+  else if (hw === 'path') cat = (t.bicycle === 'designated' && foot !== 'designated') ? 'fiets' : 'pad';
+  else if (hw === 'footway' || hw === 'pedestrian' || hw === 'track' || hw === 'steps' || hw === 'bridleway') cat = 'pad';
+  else cat = 'weg';
+
+  const s = (t.surface || '').split(';')[0].trim();
+  let surf = 'onbekend';
+  if (PAVED.has(s)) surf = 'verhard';
+  else if (UNPAVED.has(s)) surf = 'onverhard';
+  else if (t.tracktype) surf = t.tracktype === 'grade1' ? 'verhard' : 'onverhard';
+  else if (cat !== 'pad') surf = 'verhard'; // roads and cycleways without a tag: almost always paved
+
+  // Best guess for routing when the surface is unknown
+  let surfR = surf;
+  if (surf === 'onbekend') surfR = (hw === 'path' || hw === 'track' || hw === 'bridleway') ? 'onverhard' : 'verhard';
+
+  return { cat, big: BIG_ROADS.has(hw), steps: hw === 'steps', surf, surfR };
+}
+
+const MODES = {
+  wandelen: { label: 'Wandelen', pace: 720, f: { pad: 1, fiets: 1.25, weg: 1.5, big: 2.5 }, steps: 1.1 },
+  hardlopen: { label: 'Hardlopen', pace: 360, f: { pad: 1, fiets: 1.15, weg: 1.4, big: 2.2 }, steps: 1.3 },
+  trail: { label: 'Trail', pace: 420, f: { pad: 1, fiets: 1.5, weg: 1.9, big: 3.0 }, steps: 1.2 }
+};
+const PAVED_PENALTY = 3, UNPAVED_PENALTY = 4;
+
+function wayFactor(w, mode, opt) {
+  const m = MODES[mode];
+  let f = w.big ? m.f.big : m.f[w.cat];
+  if (w.steps) f *= m.steps;
+  if (w.surfR === 'verhard' && !opt.paved) f *= PAVED_PENALTY;
+  if (w.surfR === 'onverhard' && !opt.unpaved) f *= UNPAVED_PENALTY;
+  return f;
+}
+function minFactor(mode, opt) {
+  let min = Infinity;
+  for (const cat of ['pad', 'fiets', 'weg']) for (const big of [false, true]) for (const surfR of ['verhard', 'onverhard'])
+    min = Math.min(min, wayFactor({ cat, big, steps: false, surfR }, mode, opt));
+  return min;
+}
+
+class Heap {
+  constructor() { this.k = []; this.v = []; }
+  get size() { return this.k.length; }
+  push(v, key) {
+    const K = this.k, V = this.v; let i = K.length; K.push(key); V.push(v);
+    while (i > 0) { const p = (i - 1) >> 1; if (K[p] <= key) break; K[i] = K[p]; V[i] = V[p]; i = p; }
+    K[i] = key; V[i] = v;
+  }
+  pop() {
+    const K = this.k, V = this.v; const top = V[0]; const lk = K.pop(), lv = V.pop(); const n = K.length;
+    if (n > 0) {
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1; let m = i, mk = lk;
+        if (l < n && K[l] < mk) { m = l; mk = K[l]; }
+        if (r < n && K[r] < mk) { m = r; mk = K[r]; }
+        if (m === i) break;
+        K[i] = K[m]; V[i] = V[m]; i = m;
+      }
+      K[i] = lk; V[i] = lv;
+    }
+    return top;
+  }
+}
+
+function projOnSeg(lat, lon, pa, pb) {
+  const kx = Math.cos(lat * Math.PI / 180) * 111320, ky = 110574;
+  const ax = (pa[1] - lon) * kx, ay = (pa[0] - lat) * ky, bx = (pb[1] - lon) * kx, by = (pb[0] - lat) * ky;
+  const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+  let t = L > 0 ? -(ax * dx + ay * dy) / L : 0;
+  t = Math.max(0, Math.min(1, t));
+  return { t, d: Math.hypot(ax + t * dx, ay + t * dy), lat: pa[0] + t * (pb[0] - pa[0]), lon: pa[1] + t * (pb[1] - pa[1]) };
+}
+
+const CELL_LAT = 0.004, CELL_LON = 0.006, CELL_M = 400;
+
+class Graph {
+  constructor() {
+    this.nodes = new Map(); this.adj = new Map(); this.ways = []; this.seenWays = new Set();
+    this.segs = []; this.grid = new Map();
+  }
+  // compact way: [id, nodeIds[], flatCoords[lat,lon,...], tags]
+  addWay(cw) {
+    const [id, nodes, flat, tags] = cw;
+    if (this.seenWays.has(id)) return;
+    this.seenWays.add(id);
+    const info = classifyWay(tags || {});
+    if (!info) return;
+    const wi = this.ways.length; this.ways.push(info);
+    for (let i = 0; i < nodes.length; i++) {
+      const la = flat[2 * i], lo = flat[2 * i + 1];
+      if (Number.isFinite(la) && Number.isFinite(lo) && !this.nodes.has(nodes[i])) this.nodes.set(nodes[i], [la, lo]);
+    }
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const a = nodes[i], b = nodes[i + 1];
+      const pa = this.nodes.get(a), pb = this.nodes.get(b);
+      if (!pa || !pb || a === b) continue;
+      const d = hav(pa[0], pa[1], pb[0], pb[1]);
+      this._edge(a, b, d, wi); this._edge(b, a, d, wi);
+      const si = this.segs.length; this.segs.push([a, b, wi]);
+      const i0 = Math.floor(Math.min(pa[0], pb[0]) / CELL_LAT), i1 = Math.floor(Math.max(pa[0], pb[0]) / CELL_LAT);
+      const j0 = Math.floor(Math.min(pa[1], pb[1]) / CELL_LON), j1 = Math.floor(Math.max(pa[1], pb[1]) / CELL_LON);
+      for (let ci = i0; ci <= i1; ci++) for (let cj = j0; cj <= j1; cj++) {
+        const key = ci + ',' + cj; let list = this.grid.get(key);
+        if (!list) { list = []; this.grid.set(key, list); }
+        list.push(si);
+      }
+    }
+  }
+  _edge(a, b, d, wi) {
+    let l = this.adj.get(a); if (!l) { l = []; this.adj.set(a, l); }
+    l.push([b, d, wi]);
+  }
+  nearest(lat, lon, maxRings = 2) {
+    const ci = Math.floor(lat / CELL_LAT), cj = Math.floor(lon / CELL_LON);
+    let best = null; const seen = new Set();
+    for (let r = 0; r <= maxRings; r++) {
+      for (let i = ci - r; i <= ci + r; i++) for (let j = cj - r; j <= cj + r; j++) {
+        if (Math.max(Math.abs(i - ci), Math.abs(j - cj)) !== r) continue;
+        const list = this.grid.get(i + ',' + j); if (!list) continue;
+        for (const si of list) {
+          if (seen.has(si)) continue; seen.add(si);
+          const [a, b, wi] = this.segs[si];
+          const p = projOnSeg(lat, lon, this.nodes.get(a), this.nodes.get(b));
+          if (!best || p.d < best.d) best = { si, a, b, wi, lat: p.lat, lon: p.lon, d: p.d };
+        }
+      }
+      if (best && best.d <= r * CELL_M) break;
+    }
+    return best;
+  }
+  route(s, e, factors, minF, maxExpand = 800000) {
+    const S = -1, E = -2;
+    const extra = new Map();
+    const vc = new Map([[S, [s.lat, s.lon]], [E, [e.lat, e.lon]]]);
+    const add = (u, v, d, wi) => { let l = extra.get(u); if (!l) { l = []; extra.set(u, l); } l.push([v, d, wi]); };
+    const link = (V, sn) => {
+      const pa = this.nodes.get(sn.a), pb = this.nodes.get(sn.b);
+      const da = hav(sn.lat, sn.lon, pa[0], pa[1]), db = hav(sn.lat, sn.lon, pb[0], pb[1]);
+      add(V, sn.a, da, sn.wi); add(sn.a, V, da, sn.wi);
+      add(V, sn.b, db, sn.wi); add(sn.b, V, db, sn.wi);
+    };
+    link(S, s); link(E, e);
+    if (s.si === e.si) { const d = hav(s.lat, s.lon, e.lat, e.lon); add(S, E, d, s.wi); add(E, S, d, s.wi); }
+
+    const coord = id => id < 0 ? vc.get(id) : this.nodes.get(id);
+    const [elat, elon] = vc.get(E);
+    const h = id => { const c = coord(id); return hav(c[0], c[1], elat, elon) * minF; };
+    const g = new Map([[S, 0]]), prev = new Map(), closed = new Set(), heap = new Heap();
+    heap.push(S, h(S));
+    let expanded = 0, found = false;
+    while (heap.size) {
+      const u = heap.pop();
+      if (u === E) { found = true; break; }
+      if (closed.has(u)) continue;
+      closed.add(u);
+      if (++expanded > maxExpand) return null;
+      const gu = g.get(u);
+      for (const L of [this.adj.get(u), extra.get(u)]) {
+        if (!L) continue;
+        for (const [v, d, wi] of L) {
+          if (closed.has(v)) continue;
+          const ng = gu + d * factors[wi];
+          const old = g.get(v);
+          if (old === undefined || ng < old) { g.set(v, ng); prev.set(v, [u, d, wi]); heap.push(v, ng + h(v)); }
+        }
+      }
+    }
+    if (!found) return null;
+    const coords = [coord(E)];
+    const byCat = { pad: 0, fiets: 0, weg: 0, vrij: 0 }, bySurf = { verhard: 0, onverhard: 0, onbekend: 0 };
+    let dist = 0, cur = E;
+    while (cur !== S) {
+      const [p, d, wi] = prev.get(cur);
+      const w = this.ways[wi];
+      dist += d; byCat[w.cat] += d; bySurf[w.surf] += d;
+      cur = p; coords.push(coord(cur));
+    }
+    coords.reverse();
+    return { coords, dist, byCat, bySurf };
+  }
+}
+
+// Overpass JSON -> compact ways (only the tags we need)
+function compactOverpass(json) {
+  const out = [];
+  for (const el of (json && json.elements) || []) {
+    if (el.type !== 'way' || !Array.isArray(el.nodes) || !Array.isArray(el.geometry)) continue;
+    const flat = [];
+    for (let i = 0; i < el.nodes.length; i++) {
+      const g = el.geometry[i];
+      flat.push(g ? g.lat : NaN, g ? g.lon : NaN);
+    }
+    const t = {};
+    for (const k of KEEP_TAGS) if (el.tags && el.tags[k] !== undefined) t[k] = el.tags[k];
+    out.push([el.id, el.nodes, flat, t]);
+  }
+  return out;
+}
+
+/* ---------- App ---------- */
+const GARYP = [53.1665, 5.9690];
+const ROUTE_COLOR = '#1D3FA8';
+const SNAP_MAX = 400;
+const STORE = 'afstand-garyp-v1';
+const TILE_LAT = 0.04, TILE_LON = 0.06, TILE_VER = 'v1', TILE_MAX_AGE = 30 * 864e5, MAX_TILES_PER_STEP = 30;
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+
+const $ = id => document.getElementById(id);
+const state = { mode: 'wandelen', paved: true, unpaved: true, follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 }, wps: [], segs: [] };
+const graph = new Graph();
+
+/* --- storage --- */
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ mode: state.mode, paved: state.paved, unpaved: state.unpaved, follow: state.follow,
+      paces: state.paces, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
+  } catch (e) { /* private mode or full */ }
+}
+function loadSaved() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
+
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const rq = indexedDB.open('afstand-osm', 1);
+    rq.onupgradeneeded = () => rq.result.createObjectStore('tiles');
+    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+  }));
+  const tx = async (mode, fn) => {
+    try {
+      const db = await open();
+      return await new Promise(res => {
+        const t = db.transaction('tiles', mode); const r = fn(t.objectStore('tiles'));
+        t.oncomplete = () => res(r && r.result); t.onerror = () => res(null); t.onabort = () => res(null);
+      });
+    } catch (e) { return null; }
+  };
+  return { get: k => tx('readonly', s => s.get(k)), set: (k, v) => tx('readwrite', s => s.put(v, k)), clear: () => tx('readwrite', s => s.clear()) };
+})();
+
+/* --- status & toast --- */
+let statusTimer = null, pending = 0;
+function setStatus(text) { $('statusText').textContent = text; $('status').hidden = false; }
+function clearStatus() { $('status').hidden = true; }
+let toastTimer = null;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg;
+  const off = $('sheet').offsetHeight + (window.innerWidth < 720 ? 12 : 28);
+  t.style.bottom = Math.min(off, window.innerHeight - 140) + 'px';
+  t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+/* --- serial work queue --- */
+let chain = Promise.resolve();
+function queue(fn, label) {
+  pending++;
+  if (!statusTimer) statusTimer = setTimeout(() => { if (pending) setStatus(label || 'Route berekenen…'); }, 250);
+  chain = chain.then(fn).catch(err => { console.error(err); toast('Er ging iets mis. Probeer het opnieuw.'); })
+    .finally(() => { if (--pending === 0) { clearTimeout(statusTimer); statusTimer = null; clearStatus(); } });
+  return chain;
+}
+
+/* --- OSM data --- */
+class TooFar extends Error {}
+function overpassQuery(s, w, n, e) {
+  return '[out:json][timeout:50];way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway|platform|elevator|abandoned|disused|services|rest_area|busway|corridor|via_ferrata)$"]["area"!="yes"]'
+    + `(${s},${w},${n},${e});out body geom qt;`;
+}
+let epIndex = 0;
+async function fetchOverpass(q) {
+  let lastErr = null;
+  for (let k = 0; k < OVERPASS.length; k++) {
+    const idx = (epIndex + k) % OVERPASS.length;
+    const ctrl = new AbortController(); const timer = setTimeout(() => ctrl.abort(), 45000);
+    try {
+      const r = await fetch(OVERPASS[idx], { method: 'POST', body: 'data=' + encodeURIComponent(q),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (j.remark && /error/i.test(j.remark)) throw new Error(j.remark);
+      epIndex = idx;
+      return j;
+    } catch (e) { clearTimeout(timer); lastErr = e; }
+  }
+  throw lastErr || new Error('Overpass niet bereikbaar');
+}
+const tileJobs = new Map(), tilesDone = new Set();
+const tileKey = (i, j) => TILE_VER + ':' + i + ':' + j;
+function loadTile(i, j) {
+  const key = tileKey(i, j);
+  if (tileJobs.has(key)) return tileJobs.get(key);
+  const job = (async () => {
+    const cached = await idb.get(key);
+    if (cached && Array.isArray(cached.w) && Date.now() - cached.t < TILE_MAX_AGE) { for (const w of cached.w) graph.addWay(w); return; }
+    const f = x => x.toFixed(4);
+    const json = await fetchOverpass(overpassQuery(f(i * TILE_LAT), f(j * TILE_LON), f((i + 1) * TILE_LAT), f((j + 1) * TILE_LON)));
+    const ways = compactOverpass(json);
+    for (const w of ways) graph.addWay(w);
+    idb.set(key, { t: Date.now(), w: ways });
+  })();
+  tileJobs.set(key, job);
+  job.then(() => tilesDone.add(key), () => tileJobs.delete(key));
+  return job;
+}
+async function ensureBBox(s, w, n, e, quiet) {
+  const todo = [];
+  for (let i = Math.floor(s / TILE_LAT); i <= Math.floor(n / TILE_LAT); i++)
+    for (let j = Math.floor(w / TILE_LON); j <= Math.floor(e / TILE_LON); j++)
+      if (!tilesDone.has(tileKey(i, j))) todo.push([i, j]);
+  if (!todo.length) return;
+  if (todo.length > MAX_TILES_PER_STEP) throw new TooFar();
+  const total = todo.length; let done = 0, next = 0, err = null;
+  if (!quiet) setStatus(total > 1 ? `Kaartdata laden… 0/${total}` : 'Kaartdata laden…');
+  const worker = async () => {
+    while (next < todo.length) {
+      const [i, j] = todo[next++];
+      try { await loadTile(i, j); } catch (e) { err = err || e; }
+      done++; if (!quiet && total > 1) setStatus(`Kaartdata laden… ${done}/${total}`);
+    }
+  };
+  await Promise.all([worker(), worker()]);
+  if (!quiet) setStatus('Route berekenen…');
+  if (err) throw err;
+}
+const ensureAround = (lat, lng, r, quiet) => ensureBBox(lat - r, lng - r * 1.6, lat + r, lng + r * 1.6, quiet);
+
+/* --- routing --- */
+let fCache = { key: '', n: -1, f: null };
+function factors() {
+  const key = state.mode + (state.paved ? 1 : 0) + (state.unpaved ? 1 : 0);
+  if (fCache.key !== key || fCache.n !== graph.ways.length)
+    fCache = { key, n: graph.ways.length, f: Float64Array.from(graph.ways, w => wayFactor(w, state.mode, state)) };
+  return fCache.f;
+}
+function straightSeg(A, B) {
+  const d = hav(A.lat, A.lng, B.lat, B.lng);
+  return { coords: [[A.lat, A.lng], [B.lat, B.lng]], dist: d, byCat: { pad: 0, fiets: 0, weg: 0, vrij: d },
+    bySurf: { verhard: 0, onverhard: 0, onbekend: d }, straight: true };
+}
+async function snapWp(wp) {
+  try { await ensureAround(wp.lat, wp.lng, 0.008); } catch (e) { return; }
+  const s = graph.nearest(wp.lat, wp.lng);
+  if (s && s.d <= SNAP_MAX) { wp.lat = s.lat; wp.lng = s.lon; wp.marker.setLatLng([s.lat, s.lon]); }
+}
+async function computeSeg(i) {
+  const A = state.wps[i], B = state.wps[i + 1];
+  if (!A || !B) return;
+  let seg = null;
+  if (state.follow) {
+    try {
+      const span = Math.max(Math.abs(A.lat - B.lat), Math.abs(A.lng - B.lng));
+      const m = Math.max(0.012, span * 0.25);
+      await ensureBBox(Math.min(A.lat, B.lat) - m, Math.min(A.lng, B.lng) - m * 1.6, Math.max(A.lat, B.lat) + m, Math.max(A.lng, B.lng) + m * 1.6);
+      const sa = graph.nearest(A.lat, A.lng), sb = graph.nearest(B.lat, B.lng);
+      if (sa && sb && sa.d <= SNAP_MAX && sb.d <= SNAP_MAX) {
+        const r = graph.route(sa, sb, factors(), minFactor(state.mode, state));
+        if (r) {
+          seg = Object.assign(r, { straight: false });
+          if (sa.d > 1) { seg.coords.unshift([A.lat, A.lng]); seg.dist += sa.d; seg.byCat.vrij += sa.d; seg.bySurf.onbekend += sa.d; }
+          if (sb.d > 1) { seg.coords.push([B.lat, B.lng]); seg.dist += sb.d; seg.byCat.vrij += sb.d; seg.bySurf.onbekend += sb.d; }
+        } else toast('Geen route gevonden tussen deze punten. Er staat nu een rechte lijn.');
+      } else toast('Geen pad of weg in de buurt van dit punt. Er staat nu een rechte lijn.');
+    } catch (e) {
+      if (e instanceof TooFar) toast('Deze punten liggen ver uit elkaar. Zet een tussenpunt voor een route langs paden.');
+      else toast('Kaartdata kon niet worden geladen. Er staat nu een rechte lijn; probeer het later opnieuw.');
+    }
+  }
+  if (state.wps[i] === A && state.wps[i + 1] === B) state.segs[i] = seg || straightSeg(A, B);
+}
+async function recomputeAll() {
+  state.segs.length = Math.max(0, state.wps.length - 1);
+  for (let i = 0; i < state.wps.length - 1; i++) { await computeSeg(i); render(); }
+}
+
+/* --- map --- */
+const map = L.map('map', { zoomControl: false, doubleClickZoom: false, attributionControl: true }).setView(GARYP, 14);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19,
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+map.attributionControl.setPrefix(false);
+map.attributionControl.setPosition('topright');
+const routeLayer = L.layerGroup().addTo(map);
+
+const HEART = '<svg viewBox="0 0 32 32"><path d="M16 28.5S3.5 20.6 3.5 11.8C3.5 7.6 6.6 4.5 10.5 4.5c2.4 0 4.3 1.2 5.5 3 1.2-1.8 3.1-3 5.5-3 3.9 0 7 3.1 7 7.3 0 8.8-12.5 16.7-12.5 16.7z" fill="#C8102E" stroke="#fff" stroke-width="2.6" stroke-linejoin="round"/></svg>';
+const icons = {
+  start: L.divIcon({ className: 'wp wp-start', html: HEART, iconSize: [40, 40], iconAnchor: [20, 22] }),
+  mid: L.divIcon({ className: 'wp wp-mid', html: '<i></i>', iconSize: [36, 36], iconAnchor: [18, 18] }),
+  end: L.divIcon({ className: 'wp wp-end', html: '<i></i>', iconSize: [40, 40], iconAnchor: [20, 20] })
+};
+function refreshMarkers() {
+  const n = state.wps.length;
+  state.wps.forEach((wp, k) => {
+    const kind = k === 0 ? 'start' : (k === n - 1 ? 'end' : 'mid');
+    if (wp.kind !== kind) { wp.marker.setIcon(icons[kind]); wp.kind = kind; }
+    wp.marker.setZIndexOffset(kind === 'start' ? 1000 : (kind === 'end' ? 500 : 0));
+  });
+}
+let popupGuard = 0;
+map.on('popupopen', () => { popupGuard = Infinity; });
+map.on('popupclose', () => { popupGuard = Date.now() + 400; });
+function makeMarker(wp) {
+  const m = L.marker([wp.lat, wp.lng], { icon: icons.mid, draggable: true, autoPan: true, keyboard: false }).addTo(map);
+  m.on('dragend', () => { const ll = m.getLatLng(); queue(() => movePoint(wp, ll)); });
+  m.on('click', () => {
+    const btn = document.createElement('button'); btn.className = 'pop-del'; btn.textContent = 'Punt verwijderen';
+    btn.onclick = () => { map.closePopup(); queue(() => deletePoint(wp)); };
+    L.popup({ closeButton: false, offset: [0, -12], autoPan: false }).setLatLng(m.getLatLng()).setContent(btn).openOn(map);
+  });
+  return m;
+}
+
+function render() {
+  routeLayer.clearLayers();
+  for (const s of state.segs) {
+    if (!s) continue;
+    L.polyline(s.coords, { color: '#ffffff', weight: s.straight ? 6 : 9, opacity: .85, interactive: false, lineJoin: 'round' }).addTo(routeLayer);
+    L.polyline(s.coords, { color: ROUTE_COLOR, weight: s.straight ? 3.5 : 5, opacity: 1, interactive: false, lineJoin: 'round', lineCap: 'round',
+      dashArray: s.straight ? '1 9' : null }).addTo(routeLayer);
+  }
+  updateStats();
+}
+
+/* --- actions --- */
+async function addPoint(ll) {
+  const wp = { lat: ll.lat, lng: ll.lng };
+  wp.marker = makeMarker(wp);
+  state.wps.push(wp); refreshMarkers();
+  if (state.follow) await snapWp(wp);
+  if (state.wps.length > 1) { const i = state.wps.length - 2; state.segs[i] = straightSeg(state.wps[i], wp); render(); await computeSeg(i); }
+  render(); save();
+}
+async function movePoint(wp, ll) {
+  const k = state.wps.indexOf(wp); if (k < 0) return;
+  wp.lat = ll.lat; wp.lng = ll.lng;
+  if (state.follow) await snapWp(wp);
+  if (k > 0) { state.segs[k - 1] = straightSeg(state.wps[k - 1], wp); }
+  if (k < state.wps.length - 1) { state.segs[k] = straightSeg(wp, state.wps[k + 1]); }
+  render();
+  if (k > 0) await computeSeg(k - 1);
+  if (k < state.wps.length - 1) await computeSeg(k);
+  render(); save();
+}
+async function deletePoint(wp) {
+  const k = state.wps.indexOf(wp); if (k < 0) return;
+  map.removeLayer(wp.marker);
+  state.wps.splice(k, 1);
+  const n = state.wps.length;
+  if (state.segs.length) {
+    if (k === 0) state.segs.shift();
+    else if (k === n) state.segs.pop();
+    else { state.segs.splice(k - 1, 2, straightSeg(state.wps[k - 1], state.wps[k])); refreshMarkers(); render(); await computeSeg(k - 1); }
+  }
+  refreshMarkers(); render(); save();
+}
+function clearAll() {
+  for (const wp of state.wps) map.removeLayer(wp.marker);
+  state.wps = []; state.segs = []; render(); save();
+}
+
+map.on('click', e => {
+  if (Date.now() < popupGuard) return;
+  queue(() => addPoint(e.latlng));
+});
+
+$('undo').onclick = () => { const wp = state.wps[state.wps.length - 1]; if (wp) queue(() => deletePoint(wp)); };
+$('loop').onclick = () => { if (state.wps.length >= 2) { const s = state.wps[0]; queue(() => addPoint(L.latLng(s.lat, s.lng))); } };
+let clearArmed = 0;
+$('clear').onclick = () => {
+  if (!state.wps.length) return;
+  if (Date.now() - clearArmed < 3000) { clearArmed = 0; setClearArmed(false); queue(clearAll); return; }
+  clearArmed = Date.now(); setClearArmed(true);
+  setTimeout(() => { if (clearArmed && Date.now() - clearArmed >= 2900) { clearArmed = 0; setClearArmed(false); } }, 3000);
+};
+function setClearArmed(on) { $('clear').classList.toggle('armed', on); $('clearLabel').textContent = on ? 'Zeker?' : 'Wissen'; }
+
+$('gpx').onclick = async () => {
+  if (state.wps.length < 2) return;
+  const total = state.segs.reduce((a, s) => a + (s ? s.dist : 0), 0);
+  const km = (total / 1000).toFixed(2);
+  const name = `${MODES[state.mode].label} ${km.replace('.', ',')} km`;
+  const pts = [];
+  state.segs.forEach((s, i) => { if (s) s.coords.forEach((c, j) => { if (!(i > 0 && j === 0)) pts.push(c); }); });
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Afstand" xmlns="http://www.topografix.com/GPX/1/1">\n'
+    + `<metadata><name>${name}</name></metadata>\n<trk><name>${name}</name><trkseg>\n`
+    + pts.map(c => `<trkpt lat="${c[0].toFixed(6)}" lon="${c[1].toFixed(6)}"></trkpt>`).join('\n')
+    + '\n</trkseg></trk>\n</gpx>\n';
+  const fname = `route-${state.mode}-${km}km.gpx`;
+  const file = new File([xml], fname, { type: 'application/gpx+xml' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const url = URL.createObjectURL(file); const a = document.createElement('a');
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+};
+
+let meDot = null;
+$('locate').onclick = () => {
+  if (!navigator.geolocation) { toast('Locatie is niet beschikbaar op dit apparaat.'); return; }
+  setStatus('Locatie zoeken…');
+  navigator.geolocation.getCurrentPosition(p => {
+    if (!pending) clearStatus();
+    const ll = [p.coords.latitude, p.coords.longitude];
+    if (!meDot) meDot = L.circleMarker(ll, { radius: 7, color: '#fff', weight: 3, fillColor: '#2A7DE1', fillOpacity: 1, interactive: false }).addTo(map);
+    else meDot.setLatLng(ll);
+    map.setView(ll, Math.max(map.getZoom(), 15));
+  }, () => {
+    if (!pending) clearStatus();
+    toast('Locatie niet gevonden. Sta locatietoegang voor Safari toe via Instellingen > Privacy > Locatievoorzieningen.');
+  }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+};
+$('home').onclick = () => map.setView(GARYP, 14);
+
+/* --- settings --- */
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
+  if (state.mode === b.dataset.mode) return;
+  state.mode = b.dataset.mode; syncUI(); save();
+  if (state.wps.length > 1 && state.follow) queue(recomputeAll); else updateStats();
+});
+$('optFollow').onchange = e => { state.follow = e.target.checked; save(); if (state.wps.length > 1) queue(recomputeAll); };
+$('optPaved').onchange = e => { state.paved = e.target.checked; if (!state.paved && !state.unpaved) state.unpaved = true; onSurfaceChange(); };
+$('optUnpaved').onchange = e => { state.unpaved = e.target.checked; if (!state.paved && !state.unpaved) state.paved = true; onSurfaceChange(); };
+function onSurfaceChange() { syncUI(); save(); if (state.wps.length > 1 && state.follow) queue(recomputeAll); }
+function changePace(delta) {
+  const p = Math.min(1800, Math.max(150, state.paces[state.mode] + delta));
+  state.paces[state.mode] = p; syncUI(); updateStats(); save();
+}
+$('paceMinus').onclick = () => changePace(-15);
+$('pacePlus').onclick = () => changePace(15);
+$('moreBtn').onclick = () => {
+  const open = $('more').hidden; $('more').hidden = !open; $('moreBtn').setAttribute('aria-expanded', String(open));
+  if (!open) $('sheet').scrollTop = 0;
+};
+$('clearCache').onclick = async () => { await idb.clear(); toast('Opgeslagen kaartdata gewist. Paden worden opnieuw geladen wanneer nodig.'); };
+
+function fmtPace(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' per km'; }
+function syncUI() {
+  document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)));
+  $('optFollow').checked = state.follow; $('optPaved').checked = state.paved; $('optUnpaved').checked = state.unpaved;
+  $('paceTitle').textContent = 'Tempo bij ' + MODES[state.mode].label.toLowerCase();
+  $('paceOut').textContent = fmtPace(state.paces[state.mode]);
+}
+
+/* --- stats --- */
+const nf2 = new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nf1 = new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const CAT = [['pad', 'Wandelpad', 'var(--polder)'], ['fiets', 'Fietspad', 'var(--amber)'], ['weg', 'Weg', 'var(--road)'], ['vrij', 'Rechte lijn', 'var(--unknown)']];
+const SURF = [['verhard', 'Verhard', 'var(--slate)'], ['onverhard', 'Onverhard', 'var(--peat)'], ['onbekend', 'Onbekend', 'var(--unknown)']];
+function fillBar(el, defs, vals) {
+  el.replaceChildren();
+  for (const [k, , c] of defs) if (vals[k] > 0.5) { const s = document.createElement('span'); s.style.flexGrow = vals[k]; s.style.background = c; el.appendChild(s); }
+}
+function fillLegend(el, defs, vals, total) {
+  el.replaceChildren();
+  for (const [k, label, c] of defs) {
+    if (k === 'vrij' && vals[k] < 0.5) continue;
+    const li = document.createElement('li');
+    const dot = document.createElement('i'); dot.style.background = c;
+    const name = document.createElement('span'); name.textContent = label;
+    const km = document.createElement('b'); km.textContent = nf1.format(vals[k] / 1000) + ' km';
+    const pct = document.createElement('em'); pct.textContent = total > 0 ? Math.round(vals[k] / total * 100) + '%' : '0%';
+    li.append(dot, name, km, pct); el.appendChild(li);
+  }
+}
+function updateStats() {
+  const n = state.wps.length;
+  let total = 0; const cat = { pad: 0, fiets: 0, weg: 0, vrij: 0 }, surf = { verhard: 0, onverhard: 0, onbekend: 0 };
+  for (const s of state.segs) {
+    if (!s) continue; total += s.dist;
+    for (const k in cat) cat[k] += s.byCat[k] || 0;
+    for (const k in surf) surf[k] += s.bySurf[k] || 0;
+  }
+  const showNums = n >= 2;
+  $('hint').hidden = showNums;
+  $('hint').textContent = n === 0 ? 'Tik op de kaart om je startpunt te kiezen.' : 'Startpunt staat. Tik op de kaart voor je volgende punt.';
+  $('distBox').hidden = $('timeBox').hidden = $('miniBar').hidden = !showNums;
+  if (total < 1000) { $('distVal').textContent = Math.round(total); $('distUnit').textContent = 'm'; }
+  else { $('distVal').textContent = (total >= 100000 ? nf1 : nf2).format(total / 1000); $('distUnit').textContent = 'km'; }
+  const mins = Math.round(total / 1000 * state.paces[state.mode] / 60);
+  $('timeVal').textContent = mins < 60 ? `≈ ${mins} min` : `≈ ${Math.floor(mins / 60)} u ${mins % 60} min`;
+  $('paceVal').textContent = 'op ' + fmtPace(state.paces[state.mode]);
+  fillBar($('miniBar'), CAT, cat); fillBar($('barCat'), CAT, cat); fillBar($('barSurf'), SURF, surf);
+  fillLegend($('legCat'), CAT, cat, total); fillLegend($('legSurf'), SURF, surf, total);
+  $('undo').disabled = n === 0; $('clear').disabled = n === 0; $('loop').disabled = n < 2; $('gpx').disabled = n < 2;
+}
+
+/* --- start --- */
+(function init() {
+  const saved = loadSaved();
+  if (saved) {
+    if (MODES[saved.mode]) state.mode = saved.mode;
+    if (typeof saved.paved === 'boolean') state.paved = saved.paved;
+    if (typeof saved.unpaved === 'boolean') state.unpaved = saved.unpaved;
+    if (!state.paved && !state.unpaved) state.paved = state.unpaved = true;
+    if (typeof saved.follow === 'boolean') state.follow = saved.follow;
+    if (saved.paces) for (const k in MODES) if (Number.isFinite(saved.paces[k])) state.paces[k] = saved.paces[k];
+    if (Array.isArray(saved.wps)) for (const p of saved.wps) {
+      if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
+      const wp = { lat: p[0], lng: p[1] }; wp.marker = makeMarker(wp); state.wps.push(wp);
+    }
+    for (let i = 0; i < state.wps.length - 1; i++) state.segs[i] = straightSeg(state.wps[i], state.wps[i + 1]);
+  }
+  syncUI(); refreshMarkers(); render();
+  queue(() => ensureAround(GARYP[0], GARYP[1], 0.012, true).catch(() => {}), 'Kaartdata laden…');
+  if (state.wps.length > 1 && state.follow) queue(recomputeAll);
+})();
+</script>
+</body>
+</html>
