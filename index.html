@@ -114,6 +114,12 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 .stepper{display:flex;align-items:center;gap:10px}
 .stepper button{border:0;background:var(--surface-2);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer;min-width:64px}
 .stepper output{flex:1;text-align:center;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.mins{display:flex;align-items:center;gap:8px;padding:0 0 10px}
+.mins button{width:44px;height:40px;border:0;background:var(--surface-2);border-radius:10px;font-size:20px;font-weight:600;cursor:pointer}
+.mins input{width:64px;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);
+  font:600 17px var(--font);text-align:center;font-variant-numeric:tabular-nums;-webkit-user-select:text;user-select:text}
+.mins span{font-size:15px;color:var(--muted)}
+.extra{margin:-2px 2px 10px;font-size:13px;line-height:1.4;color:var(--muted)}
 
 .legend{list-style:none;margin:8px 0 4px;padding:0;display:grid;gap:5px}
 .legend li{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center;font-size:14px}
@@ -155,9 +161,9 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 
 <section id="sheet" aria-label="Route">
   <div class="modes" role="radiogroup" aria-label="Activiteit">
-    <button role="radio" data-mode="wandelen">Wandelen</button>
     <button role="radio" data-mode="hardlopen">Hardlopen</button>
     <button role="radio" data-mode="trail">Trailrunning</button>
+    <button role="radio" data-mode="wandelen">Wandelen</button>
   </div>
 
   <div class="readout">
@@ -165,6 +171,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
     <div class="dist" id="distBox" hidden><span id="distVal">0,00</span><small id="distUnit">km</small></div>
     <div class="time" id="timeBox" hidden><b id="timeVal">0 min</b><span id="paceVal">12:00 per km</span></div>
   </div>
+  <p class="extra" id="extra" hidden></p>
   <div class="bar" id="miniBar" aria-hidden="true" hidden></div>
 
   <div class="issue" id="issue" hidden><span id="issueText"></span><button id="retry">Opnieuw</button></div>
@@ -197,12 +204,30 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
       <p class="note">Uitgezet betekent: zoveel mogelijk vermijden. De route kiest eerst wandelpaden, dan fietspaden, dan overige wegen.</p>
     </div>
     <div class="group">
-      <h3 id="paceTitle">Tempo bij wandelen</h3>
+      <h3 id="paceTitle">Tempo bij hardlopen</h3>
       <div class="stepper">
         <button id="paceMinus" aria-label="Tempo 15 seconden per km sneller">−15 s</button>
-        <output id="paceOut">12:00 per km</output>
+        <output id="paceOut">6:00 per km</output>
         <button id="pacePlus" aria-label="Tempo 15 seconden per km langzamer">+15 s</button>
       </div>
+    </div>
+    <div class="group">
+      <h3>Warming-up en cooling-down</h3>
+      <label class="switch"><span><b>Warming-up</b><small>Telt op bij de totale tijd</small></span><input type="checkbox" id="optWu"><i></i></label>
+      <div class="mins" id="wuRow" hidden>
+        <button data-d="-1" aria-label="Warming-up 1 minuut korter">−</button>
+        <input id="wuMin" type="number" inputmode="numeric" min="1" max="90" step="1" aria-label="Minuten warming-up">
+        <span>min</span>
+        <button data-d="1" aria-label="Warming-up 1 minuut langer">+</button>
+      </div>
+      <label class="switch"><span><b>Cooling-down</b><small>Telt op bij de totale tijd</small></span><input type="checkbox" id="optCd"><i></i></label>
+      <div class="mins" id="cdRow" hidden>
+        <button data-d="-1" aria-label="Cooling-down 1 minuut korter">−</button>
+        <input id="cdMin" type="number" inputmode="numeric" min="1" max="90" step="1" aria-label="Minuten cooling-down">
+        <span>min</span>
+        <button data-d="1" aria-label="Cooling-down 1 minuut langer">+</button>
+      </div>
+      <p class="note" id="extraNote">Extra kilometers rekenen met je wandeltempo.</p>
     </div>
     <div class="group">
       <h3>Wegtype</h3>
@@ -460,14 +485,15 @@ const TILE_LAT = 0.04, TILE_LON = 0.06, TILE_VER = 'v1', TILE_MAX_AGE = 30 * 864
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 
 const $ = id => document.getElementById(id);
-const state = { mode: 'wandelen', paved: true, unpaved: true, follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 }, wps: [], segs: [] };
+const state = { mode: 'hardlopen', paved: true, unpaved: true, follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 },
+  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, wps: [], segs: [] };
 const graph = new Graph();
 
 /* --- storage --- */
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({ mode: state.mode, paved: state.paved, unpaved: state.unpaved, follow: state.follow,
-      paces: state.paces, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
+      paces: state.paces, wu: state.wu, cd: state.cd, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
   } catch (e) { /* private mode or full */ }
 }
 function loadSaved() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
@@ -857,21 +883,54 @@ $('optFollow').onchange = e => { state.follow = e.target.checked; save(); if (st
 $('optPaved').onchange = e => { state.paved = e.target.checked; if (!state.paved && !state.unpaved) state.unpaved = true; onSurfaceChange(); };
 $('optUnpaved').onchange = e => { state.unpaved = e.target.checked; if (!state.paved && !state.unpaved) state.paved = true; onSurfaceChange(); };
 function onSurfaceChange() { syncUI(); save(); if (state.wps.length > 1 && state.follow) queue(recomputeAll); }
-function changePace(delta) {
-  const p = Math.min(1800, Math.max(150, state.paces[state.mode] + delta));
-  state.paces[state.mode] = p; syncUI(); updateStats(); save();
+// Running: pace in min/km, steps of 15 s. Walking: speed in km/h, steps of 0.1 km/h.
+function stepTempo(dir) {
+  if (state.mode === 'wandelen') {
+    const kmh = Math.min(9, Math.max(2, Math.round((walkKmh() + dir * 0.1) * 10) / 10));
+    state.paces.wandelen = 3600 / kmh;
+  } else {
+    state.paces[state.mode] = Math.min(1800, Math.max(150, Math.round(state.paces[state.mode]) + dir * 15));
+  }
+  syncUI(); updateStats(); save();
 }
-$('paceMinus').onclick = () => changePace(-15);
-$('pacePlus').onclick = () => changePace(15);
+$('paceMinus').onclick = () => stepTempo(-1);
+$('pacePlus').onclick = () => stepTempo(1);
+function setExtraMin(k, v, fromTyping) {
+  if (!Number.isFinite(v)) { if (!fromTyping) syncUI(); return; }
+  const c = Math.min(90, Math.max(1, Math.round(v)));
+  if (fromTyping && c !== v) return; // wait until the typed value is valid
+  state[k].min = c; if (!fromTyping) syncUI(); updateStats(); save();
+}
+for (const k of ['wu', 'cd']) {
+  const sw = $(k === 'wu' ? 'optWu' : 'optCd'), inp = $(k + 'Min');
+  sw.onchange = () => { state[k].on = sw.checked; syncUI(); updateStats(); save(); };
+  inp.addEventListener('input', () => setExtraMin(k, parseInt(inp.value, 10), true));
+  inp.addEventListener('change', () => setExtraMin(k, parseInt(inp.value, 10), false));
+  $(k + 'Row').querySelectorAll('button').forEach(b => b.onclick = () => setExtraMin(k, state[k].min + Number(b.dataset.d), false));
+}
 $('retry').onclick = () => { osmBackoffUntil = 0; osmFailCount = 0; queue(recomputeAll); };
 $('clearCache').onclick = async () => { await idb.clear(); toast('Opgeslagen kaartdata gewist. Paden worden opnieuw geladen wanneer nodig.'); };
 
-function fmtPace(sec) { return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' per km'; }
+function fmtPace(sec) { sec = Math.round(sec); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0') + ' per km'; }
+function walkKmh() { return Math.round(36000 / state.paces.wandelen) / 10; }
+const nfKmh = new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+function fmtTempo(mode) { return mode === 'wandelen' ? nfKmh.format(walkKmh()) + ' km/u' : fmtPace(state.paces[mode]); }
 function syncUI() {
   document.querySelectorAll('.modes button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === state.mode)));
   $('optFollow').checked = state.follow; $('optPaved').checked = state.paved; $('optUnpaved').checked = state.unpaved;
   $('paceTitle').textContent = 'Tempo bij ' + MODES[state.mode].label.toLowerCase();
-  $('paceOut').textContent = fmtPace(state.paces[state.mode]);
+  $('paceOut').textContent = fmtTempo(state.mode);
+  const walk = state.mode === 'wandelen';
+  $('paceMinus').textContent = walk ? '−0,1' : '−15 s';
+  $('pacePlus').textContent = walk ? '+0,1' : '+15 s';
+  $('paceMinus').setAttribute('aria-label', walk ? 'Wandelsnelheid 0,1 km per uur lager' : 'Tempo 15 seconden per km sneller');
+  $('pacePlus').setAttribute('aria-label', walk ? 'Wandelsnelheid 0,1 km per uur hoger' : 'Tempo 15 seconden per km langzamer');
+  for (const k of ['wu', 'cd']) {
+    $(k === 'wu' ? 'optWu' : 'optCd').checked = state[k].on;
+    $(k + 'Row').hidden = !state[k].on;
+    if (document.activeElement !== $(k + 'Min')) $(k + 'Min').value = state[k].min;
+  }
+  $('extraNote').textContent = 'Extra kilometers rekenen met je wandelsnelheid (' + fmtTempo('wandelen') + ').';
 }
 
 /* --- stats --- */
@@ -909,9 +968,16 @@ function updateStats() {
   $('distBox').hidden = $('timeBox').hidden = $('miniBar').hidden = !showNums;
   if (total < 1000) { $('distVal').textContent = Math.round(total); $('distUnit').textContent = 'm'; }
   else { $('distVal').textContent = (total >= 100000 ? nf1 : nf2).format(total / 1000); $('distUnit').textContent = 'km'; }
-  const mins = Math.round(total / 1000 * state.paces[state.mode] / 60);
+  const xMin = (state.wu.on ? state.wu.min : 0) + (state.cd.on ? state.cd.min : 0);
+  const xKm = xMin * 60 / state.paces.wandelen;
+  const mins = Math.round(total / 1000 * state.paces[state.mode] / 60 + xMin);
+  const parts = [];
+  if (state.wu.on) parts.push(state.wu.min + ' min warming-up');
+  if (state.cd.on) parts.push(state.cd.min + ' min cooling-down');
+  $('extra').hidden = !(showNums && xMin > 0);
+  $('extra').textContent = 'Incl. ' + parts.join(' en ') + ' (≈\u00A0' + nf2.format(xKm) + '\u00A0km wandelen). Totaal ' + nf2.format(total / 1000 + xKm) + '\u00A0km.';
   $('timeVal').textContent = mins < 60 ? `≈ ${mins} min` : `≈ ${Math.floor(mins / 60)} u ${mins % 60} min`;
-  $('paceVal').textContent = 'op ' + fmtPace(state.paces[state.mode]);
+  $('paceVal').textContent = 'op ' + fmtTempo(state.mode);
   fillBar($('miniBar'), CAT, cat); fillBar($('barCat'), CAT, cat); fillBar($('barSurf'), SURF, surf);
   fillLegend($('legCat'), CAT, cat, total); fillLegend($('legSurf'), SURF, surf, total);
   const failed = state.follow && state.segs.some(s => s && s.failed);
@@ -935,6 +1001,10 @@ function updateStats() {
     if (!state.paved && !state.unpaved) state.paved = state.unpaved = true;
     if (typeof saved.follow === 'boolean') state.follow = saved.follow;
     if (saved.paces) for (const k in MODES) if (Number.isFinite(saved.paces[k])) state.paces[k] = saved.paces[k];
+    for (const k of ['wu', 'cd']) if (saved[k] && typeof saved[k] === 'object') {
+      state[k].on = saved[k].on === true;
+      if (Number.isFinite(saved[k].min)) state[k].min = Math.min(90, Math.max(1, Math.round(saved[k].min)));
+    }
     if (Array.isArray(saved.wps)) for (const p of saved.wps) {
       if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
       const wp = { lat: p[0], lng: p[1] }; wp.marker = makeMarker(wp); state.wps.push(wp);
