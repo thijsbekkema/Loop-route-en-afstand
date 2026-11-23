@@ -46,6 +46,32 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 .fab svg{width:22px;height:22px}
 #locate{top:calc(env(safe-area-inset-top,0px) + 12px)}
 #home{top:calc(env(safe-area-inset-top,0px) + 64px)}
+#searchBtn{top:calc(env(safe-area-inset-top,0px) + 116px)}
+#searchPanel{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);left:10px;right:10px;z-index:650;max-width:520px;
+  background:var(--surface);border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.25);padding:6px;max-height:calc(100% - 80px);overflow-y:auto}
+.sbar{display:flex;align-items:center;gap:8px;padding:0 4px 0 10px}
+.sbar svg{width:19px;height:19px;flex:none;color:var(--muted)}
+.sbar input{flex:1;min-width:0;height:44px;border:0;background:transparent;color:var(--ink);font:500 17px var(--font);outline:none;
+  -webkit-user-select:text;user-select:text}
+.sbar input::-webkit-search-cancel-button{display:none}
+#searchClose{flex:none;width:40px;height:40px;border:0;border-radius:10px;background:var(--surface-2);font-size:22px;line-height:1;cursor:pointer}
+#searchMsg{margin:4px 10px 8px;font-size:14px;color:var(--muted)}
+#searchResults{list-style:none;margin:0;padding:0}
+#searchResults li{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:6px 4px 6px 0}
+.resPick{flex:1;min-width:0;text-align:left;border:0;background:none;padding:6px 6px 6px 10px;cursor:pointer;font-size:15px;font-weight:500;line-height:1.3}
+.resPick small{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:1px}
+.resAct{display:flex;gap:6px;flex:none}
+.resAct button{border:0;border-radius:9px;padding:8px 10px;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface-2)}
+.resAct .resStart{background:#1E9E50;color:#fff}
+.search-pin{display:grid;place-items:center}
+.search-pin i{width:16px;height:16px;border-radius:50%;border:4px solid var(--ink);background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.layers{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px;margin:4px 0 6px}
+.layers button{border:0;background:transparent;border-radius:9px;padding:9px 4px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer}
+.layers button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.layers button:disabled{opacity:.45;cursor:default}
+.homeLine{margin:2px 0 8px;font-size:16px;font-weight:500}
+.btnRow{display:flex;gap:8px;flex-wrap:wrap}
+.btnRow button{border:0;background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600;cursor:pointer}
 
 #status{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 16px);z-index:600;
   background:var(--ink);color:var(--surface);font-size:13px;font-weight:500;padding:8px 14px;border-radius:999px;
@@ -156,9 +182,22 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 <button class="fab" id="locate" aria-label="Naar mijn locatie">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
 </button>
-<button class="fab" id="home" aria-label="Terug naar Garyp">
+<button class="fab" id="home" aria-label="Naar thuislocatie">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg>
 </button>
+
+<button class="fab" id="searchBtn" aria-label="Adres zoeken">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+</button>
+<div id="searchPanel" hidden>
+  <div class="sbar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+    <input id="searchInput" type="search" placeholder="Adres, straat of plaats" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Adres zoeken">
+    <button id="searchClose" aria-label="Zoeken sluiten">×</button>
+  </div>
+  <p id="searchMsg" hidden></p>
+  <ul id="searchResults"></ul>
+</div>
 
 <div class="mapActions">
   <button class="chip" id="undo" aria-label="Laatste punt ongedaan maken" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Ongedaan</span></button>
@@ -205,6 +244,23 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
       <p class="note">Uitgezet betekent: zoveel mogelijk vermijden. De route kiest eerst wandelpaden, dan fietspaden, dan overige wegen.</p>
     </div>
     <div class="group">
+      <h3>Kaart</h3>
+      <div class="layers" role="radiogroup" aria-label="Kaartlaag">
+        <button role="radio" data-layer="topo">Tracestrack Topo</button>
+        <button role="radio" data-layer="osm">Standaard</button>
+      </div>
+      <p class="note" id="layerNote"></p>
+    </div>
+    <div class="group">
+      <h3>Thuislocatie</h3>
+      <p class="homeLine" id="homeName">Garyp</p>
+      <div class="btnRow">
+        <button id="homeSearch">Ander adres kiezen</button>
+        <button id="homeReset" hidden>Terug naar Garyp</button>
+      </div>
+      <p class="note">De kaart opent hier. Met het vergrootglas op de kaart kies je ook een adres als startpunt.</p>
+    </div>
+    <div class="group">
       <h3 id="paceTitle">Tempo bij hardlopen</h3>
       <div class="stepper">
         <button id="paceMinus" aria-label="Tempo 15 seconden per km sneller">−15 s</button>
@@ -245,6 +301,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 </section>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="config.js"></script>
 <script>
 'use strict';
 const EARTH_R = 6371008.8;
@@ -487,14 +544,14 @@ const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.p
 
 const $ = id => document.getElementById(id);
 const state = { mode: 'hardlopen', paved: true, unpaved: true, follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 },
-  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, wps: [], segs: [] };
+  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, layer: 'topo', home: null, wps: [], segs: [] };
 const graph = new Graph();
 
 /* --- storage --- */
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({ mode: state.mode, paved: state.paved, unpaved: state.unpaved, follow: state.follow,
-      paces: state.paces, wu: state.wu, cd: state.cd, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
+      paces: state.paces, wu: state.wu, cd: state.cd, layer: state.layer, home: state.home, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
   } catch (e) { /* private mode or full */ }
 }
 function loadSaved() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
@@ -731,9 +788,43 @@ async function recomputeAll() {
 
 /* --- map --- */
 const map = L.map('map', { zoomControl: false, doubleClickZoom: false, attributionControl: true }).setView(GARYP, 14);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19,
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
 map.attributionControl.setPrefix(false);
+const TRACESTRACK_KEY = String(window.TRACESTRACK_KEY || '').trim();
+const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+let baseLayer = null, activeLayer = null;
+function setBaseLayer(name, isFallback) {
+  if (name === 'topo' && !TRACESTRACK_KEY) name = 'osm';
+  if (baseLayer) map.removeLayer(baseLayer);
+  activeLayer = name;
+  if (name === 'topo') {
+    baseLayer = L.tileLayer('https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key=' + encodeURIComponent(TRACESTRACK_KEY),
+      { maxZoom: 19, attribution: OSM_ATTR + ', kaart: <a href="https://www.tracestrack.com/">Tracestrack</a>' });
+    let misses = 0;
+    baseLayer.on('tileload', () => { misses = 0; });
+    baseLayer.on('tileerror', () => {
+      if (++misses >= 8 && activeLayer === 'topo') {
+        setBaseLayer('osm', true);
+        toast('Tracestrack Topo is nu niet beschikbaar. De standaardkaart wordt gebruikt.');
+      }
+    });
+  } else {
+    baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM_ATTR });
+  }
+  baseLayer.addTo(map); baseLayer.bringToBack();
+  if (typeof syncLayerUI === 'function') syncLayerUI(isFallback);
+}
+function syncLayerUI(isFallback) {
+  document.querySelectorAll('.layers button').forEach(b => {
+    b.setAttribute('aria-checked', String(b.dataset.layer === activeLayer));
+    if (b.dataset.layer === 'topo') b.disabled = !TRACESTRACK_KEY;
+  });
+  $('layerNote').textContent = !TRACESTRACK_KEY ? 'Tracestrack Topo heeft een sleutel nodig in config.js. Nu wordt de standaardkaart gebruikt.'
+    : (isFallback ? 'Tracestrack Topo gaf geen kaart terug, daarom staat de standaardkaart aan.' : '');
+  $('layerNote').hidden = !$('layerNote').textContent;
+}
+document.querySelectorAll('.layers button').forEach(b => b.onclick = () => {
+  state.layer = b.dataset.layer; save(); setBaseLayer(state.layer);
+});
 map.attributionControl.setPosition('topright');
 const routeLayer = L.layerGroup().addTo(map);
 
@@ -871,7 +962,105 @@ $('locate').onclick = () => {
     toast('Locatie niet gevonden. Sta locatietoegang voor Safari toe via Instellingen > Privacy > Locatievoorzieningen.');
   }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
 };
-$('home').onclick = () => map.setView(GARYP, 14);
+function homePos() { return state.home ? [state.home.lat, state.home.lng] : GARYP; }
+$('home').onclick = () => map.setView(homePos(), state.home ? 15 : 14);
+function syncHome() {
+  $('homeName').textContent = state.home ? state.home.name : 'Garyp';
+  $('homeReset').hidden = !state.home;
+}
+$('homeReset').onclick = () => { state.home = null; save(); syncHome(); map.setView(GARYP, 14); toast('Thuislocatie staat weer op Garyp.'); };
+$('homeSearch').onclick = () => { window.scrollTo(0, 0); openSearch(); };
+
+/* --- address search: PDOK (Dutch addresses) with OpenStreetMap Nominatim as backup --- */
+const PDOK = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/';
+const TYPE_NL = { adres: 'Adres', weg: 'Straat', postcode: 'Postcode', woonplaats: 'Plaats', gemeente: 'Gemeente' };
+let searchSeq = 0, searchTimer = null, searchPin = null;
+function openSearch() {
+  $('searchPanel').hidden = false; $('searchInput').focus(); $('searchInput').select();
+}
+function closeSearch() { $('searchPanel').hidden = true; $('searchInput').blur(); }
+$('searchBtn').onclick = openSearch;
+$('searchClose').onclick = closeSearch;
+function searchMsg(text) { $('searchMsg').textContent = text || ''; $('searchMsg').hidden = !text; }
+async function getJSON(url) {
+  const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 10000);
+  try { const r = await fetch(url, { signal: ctrl.signal }); if (!r.ok) throw new HttpError(r.status); return await r.json(); }
+  finally { clearTimeout(to); }
+}
+async function pdokSuggest(q) {
+  const j = await getJSON(PDOK + 'suggest?' + new URLSearchParams({ q, rows: '7' }));
+  return ((j.response && j.response.docs) || []).map(d => ({ id: d.id, name: d.weergavenaam, type: TYPE_NL[d.type] || '' }));
+}
+async function nominatimSearch(q) {
+  const j = await getJSON('https://nominatim.openstreetmap.org/search?' + new URLSearchParams({ q, format: 'jsonv2', limit: '6', 'accept-language': 'nl' }));
+  return (Array.isArray(j) ? j : []).map(d => ({ lat: +d.lat, lng: +d.lon, name: d.display_name, type: 'OpenStreetMap' }))
+    .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lng));
+}
+async function resolvePlace(r) {
+  if (Number.isFinite(r.lat)) return r;
+  const j = await getJSON(PDOK + 'lookup?' + new URLSearchParams({ id: r.id }));
+  const d = j.response && j.response.docs && j.response.docs[0];
+  const m = d && /POINT\(([-\d.]+) ([-\d.]+)\)/.exec(d.centroide_ll || '');
+  if (!m) throw new Error('geen coördinaat');
+  return { lat: +m[2], lng: +m[1], name: r.name };
+}
+function showResults(list) {
+  const ul = $('searchResults'); ul.replaceChildren();
+  for (const r of list) {
+    const li = document.createElement('li');
+    const pick = document.createElement('button'); pick.className = 'resPick';
+    pick.append(document.createTextNode(r.name));
+    if (r.type) { const s = document.createElement('small'); s.textContent = r.type; pick.appendChild(s); }
+    const act = document.createElement('div'); act.className = 'resAct';
+    const bS = document.createElement('button'); bS.className = 'resStart'; bS.textContent = 'Start';
+    const bH = document.createElement('button'); bH.textContent = 'Thuis';
+    pick.onclick = () => usePlace(r, 'show'); bS.onclick = () => usePlace(r, 'start'); bH.onclick = () => usePlace(r, 'home');
+    act.append(bS, bH); li.append(pick, act); ul.appendChild(li);
+  }
+}
+async function runSearch(q, viaEnter) {
+  const seq = ++searchSeq;
+  if (q.length < 2) { showResults([]); searchMsg(''); return; }
+  searchMsg('Zoeken…');
+  let list = [];
+  try { list = await pdokSuggest(q); } catch (e) { list = []; }
+  if (seq !== searchSeq) return;
+  if (!list.length && viaEnter) {
+    try { list = await nominatimSearch(q); } catch (e) { list = []; }
+    if (seq !== searchSeq) return;
+  }
+  showResults(list);
+  searchMsg(list.length ? '' : (viaEnter ? 'Niets gevonden. Probeer straat en plaats, bijvoorbeeld “Haadwei Garyp”.' : 'Druk op Zoek om ook buiten Nederland te zoeken.'));
+}
+$('searchInput').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = $('searchInput').value.trim();
+  searchTimer = setTimeout(() => runSearch(q, false), 300);
+});
+$('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); clearTimeout(searchTimer); runSearch($('searchInput').value.trim(), true); }
+  if (e.key === 'Escape') closeSearch();
+});
+async function usePlace(r, action) {
+  let p;
+  try { searchMsg('Locatie ophalen…'); p = await resolvePlace(r); searchMsg(''); }
+  catch (e) { searchMsg('Deze locatie kon niet worden opgehaald. Probeer het opnieuw.'); return; }
+  const ll = L.latLng(p.lat, p.lng);
+  closeSearch();
+  if (searchPin) { map.removeLayer(searchPin); searchPin = null; }
+  if (action === 'show') {
+    searchPin = L.marker(ll, { icon: L.divIcon({ className: 'search-pin', html: '<i></i>', iconSize: [28, 28], iconAnchor: [14, 14] }), interactive: false, keyboard: false }).addTo(map);
+    map.setView(ll, 16);
+  } else if (action === 'start') {
+    map.setView(ll, Math.max(map.getZoom(), 15));
+    if (!state.wps.length) addPointNow(ll);
+    else { state.wps[0].marker.setLatLng(ll); movePointNow(state.wps[0], ll); }
+  } else {
+    state.home = { lat: p.lat, lng: p.lng, name: r.name.slice(0, 120) };
+    save(); syncHome(); map.setView(ll, 15);
+    toast('Thuislocatie ingesteld: ' + state.home.name);
+  }
+}
 
 /* --- settings --- */
 document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
@@ -964,7 +1153,7 @@ function updateStats() {
   }
   const showNums = n >= 2;
   $('hint').hidden = showNums;
-  $('hint').textContent = n === 0 ? 'Tik op de kaart om je startpunt te kiezen.' : 'Startpunt staat. Tik op de kaart voor je volgende punt.';
+  $('hint').textContent = n === 0 ? 'Tik op de kaart om je startpunt te kiezen, of zoek een adres met het vergrootglas.' : 'Startpunt staat. Tik op de kaart voor je volgende punt.';
   $('distBox').hidden = $('timeBox').hidden = $('miniBar').hidden = !showNums;
   if (total < 1000) { $('distVal').textContent = Math.round(total); $('distUnit').textContent = 'm'; }
   else { $('distVal').textContent = (total >= 100000 ? nf1 : nf2).format(total / 1000); $('distUnit').textContent = 'km'; }
@@ -1001,6 +1190,9 @@ function updateStats() {
     if (!state.paved && !state.unpaved) state.paved = state.unpaved = true;
     if (typeof saved.follow === 'boolean') state.follow = saved.follow;
     if (saved.paces) for (const k in MODES) if (Number.isFinite(saved.paces[k])) state.paces[k] = saved.paces[k];
+    if (saved.layer === 'topo' || saved.layer === 'osm') state.layer = saved.layer;
+    const h = saved.home;
+    if (h && Number.isFinite(h.lat) && Number.isFinite(h.lng)) state.home = { lat: h.lat, lng: h.lng, name: String(h.name || 'Thuis').slice(0, 120) };
     for (const k of ['wu', 'cd']) if (saved[k] && typeof saved[k] === 'object') {
       state[k].on = saved[k].on === true;
       if (Number.isFinite(saved[k].min)) state[k].min = Math.min(90, Math.max(1, Math.round(saved[k].min)));
@@ -1011,8 +1203,10 @@ function updateStats() {
     }
     for (let i = 0; i < state.wps.length - 1; i++) state.segs[i] = straightSeg(state.wps[i], state.wps[i + 1]);
   }
-  syncUI(); refreshMarkers(); render();
-  queue(() => ensureAround(GARYP[0], GARYP[1], 0.012, true).catch(() => {}), 'Kaartdata laden…');
+  setBaseLayer(state.layer);
+  const hp = homePos(); map.setView(hp, state.home ? 15 : 14);
+  syncUI(); syncHome(); refreshMarkers(); render();
+  queue(() => ensureAround(hp[0], hp[1], 0.012, true).catch(() => {}), 'Kaartdata laden…');
   if (state.wps.length > 1 && state.follow) queue(recomputeAll);
 })();
 </script>
