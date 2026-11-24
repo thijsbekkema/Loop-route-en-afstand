@@ -241,7 +241,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
       <label class="switch"><span><b>Paden en wegen volgen</b><small>Uit: rechte lijnen tussen je punten</small></span><input type="checkbox" id="optFollow"><i></i></label>
       <label class="switch"><span><b>Verharde paden</b><small>Asfalt, klinkers, beton</small></span><input type="checkbox" id="optPaved"><i></i></label>
       <label class="switch"><span><b>Onverharde paden</b><small>Gras, zand, grind, schelpen</small></span><input type="checkbox" id="optUnpaved"><i></i></label>
-      <p class="note">Uitgezet betekent: zoveel mogelijk vermijden. De route kiest eerst wandelpaden, dan fietspaden, dan overige wegen.</p>
+      <p class="note">Uitgezet betekent: zoveel mogelijk vermijden. Je keuze wordt per activiteit onthouden. De route kiest eerst wandelpaden, dan fietspaden, dan overige wegen.</p>
     </div>
     <div class="group">
       <h3>Kaart</h3>
@@ -293,6 +293,11 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
       <h3>Ondergrond</h3>
       <div class="bar" id="barSurf"></div>
       <ul class="legend" id="legSurf"></ul>
+    </div>
+    <div class="group" id="statsGroup" hidden>
+      <h3>Statistieken</h3>
+      <label class="switch"><span><b>Anonieme statistieken delen</b><small>Helpt de maker de app te verbeteren</small></span><input type="checkbox" id="optStats"><i></i></label>
+      <p class="note">Telt hoe vaak de app wordt gebruikt en het start- en eindpunt van routes, afgerond op ongeveer 1 km. Geen namen, adressen of cookies.</p>
     </div>
     <p class="foot">Kaart en paden: © OpenStreetMap-bijdragers. Afstanden en tijden zijn een schatting.
       Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
@@ -543,16 +548,19 @@ const TILE_LAT = 0.04, TILE_LON = 0.06, TILE_VER = 'v1', TILE_MAX_AGE = 30 * 864
 const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 
 const $ = id => document.getElementById(id);
-const state = { mode: 'hardlopen', paved: true, unpaved: true, follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 },
-  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, layer: 'topo', home: null, wps: [], segs: [] };
+// Default surface choice per activity; changes are remembered per activity.
+const SURF_DEFAULTS = { hardlopen: { paved: true, unpaved: false }, trail: { paved: false, unpaved: true }, wandelen: { paved: true, unpaved: true } };
+const state = { mode: 'hardlopen', paved: true, unpaved: false, surf: JSON.parse(JSON.stringify(SURF_DEFAULTS)), follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 },
+  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, layer: 'topo', home: null, stats: true, wps: [], segs: [] };
 const graph = new Graph();
 
 /* --- storage --- */
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({ mode: state.mode, paved: state.paved, unpaved: state.unpaved, follow: state.follow,
-      paces: state.paces, wu: state.wu, cd: state.cd, layer: state.layer, home: state.home, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
+      paces: state.paces, wu: state.wu, cd: state.cd, layer: state.layer, home: state.home, stats: state.stats, surf: state.surf, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
   } catch (e) { /* private mode or full */ }
+  if (typeof scheduleStats === 'function') scheduleStats();
 }
 function loadSaved() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
 
@@ -933,6 +941,7 @@ $('gpx').onclick = async () => {
   const name = `${MODES[state.mode].label} ${km.replace('.', ',')} km`;
   const pts = [];
   state.segs.forEach((s, i) => { if (s) s.coords.forEach((c, j) => { if (!(i > 0 && j === 0)) pts.push(c); }); });
+  sendRouteStats();
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Afstand" xmlns="http://www.topografix.com/GPX/1/1">\n'
     + `<metadata><name>${name}</name></metadata>\n<trk><name>${name}</name><trkseg>\n`
     + pts.map(c => `<trkpt lat="${c[0].toFixed(6)}" lon="${c[1].toFixed(6)}"></trkpt>`).join('\n')
@@ -970,6 +979,44 @@ function syncHome() {
 }
 $('homeReset').onclick = () => { state.home = null; save(); syncHome(); map.setView(GARYP, 14); toast('Thuislocatie staat weer op Garyp.'); };
 $('homeSearch').onclick = () => { window.scrollTo(0, 0); openSearch(); };
+
+/* --- anonymous usage statistics (GoatCounter; code in config.js) --- */
+const GC_CODE = String(window.GOATCOUNTER_CODE || 'afstand-garyp').trim().replace(/[^a-z0-9-]/gi, '');
+const statsOn = () => !!GC_CODE && state.stats;
+let gcLoaded = false, statsTimer = null;
+const statsSent = new Set();
+function loadGoatCounter() {
+  if (gcLoaded || !statsOn()) return;
+  gcLoaded = true;
+  const s = document.createElement('script');
+  s.async = true; s.src = 'https://gc.zgo.at/count.v5.js';
+  s.dataset.goatcounter = 'https://' + GC_CODE + '.goatcounter.com/count';
+  document.head.appendChild(s);
+}
+function syncStats() { $('statsGroup').hidden = !GC_CODE; $('optStats').checked = state.stats; }
+$('optStats').onchange = e => { state.stats = e.target.checked; save(); if (state.stats) loadGoatCounter(); };
+// One count per distinct route (activity + rounded start and end), sent once the route has been left alone for a while.
+function sendRouteStats() {
+  clearTimeout(statsTimer);
+  if (!statsOn() || state.wps.length < 2) return;
+  const gc = window.goatcounter;
+  if (!gc || typeof gc.count !== 'function') return;
+  const r = p => p.lat.toFixed(2) + ',' + p.lng.toFixed(2);
+  const start = r(state.wps[0]), end = r(state.wps[state.wps.length - 1]);
+  const key = state.mode + '|' + start + '|' + end;
+  if (statsSent.has(key)) return;
+  statsSent.add(key);
+  try {
+    gc.count({ path: 'start-' + start, title: 'Startlocatie', event: true });
+    gc.count({ path: 'eind-' + end, title: 'Eindlocatie', event: true });
+    gc.count({ path: 'route-' + state.mode, title: 'Route: ' + MODES[state.mode].label.toLowerCase(), event: true });
+  } catch (e) { /* statistics are best effort */ }
+}
+function scheduleStats() {
+  clearTimeout(statsTimer);
+  if (statsOn() && state.wps.length >= 2) statsTimer = setTimeout(sendRouteStats, 45000);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') sendRouteStats(); });
 
 /* --- address search: PDOK (Dutch addresses) with OpenStreetMap Nominatim as backup --- */
 const PDOK = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/';
@@ -1063,15 +1110,16 @@ async function usePlace(r, action) {
 }
 
 /* --- settings --- */
+function applySurfForMode() { const s = state.surf[state.mode]; state.paved = s.paved; state.unpaved = s.unpaved; }
 document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
   if (state.mode === b.dataset.mode) return;
-  state.mode = b.dataset.mode; syncUI(); save();
+  state.mode = b.dataset.mode; applySurfForMode(); syncUI(); save();
   if (state.wps.length > 1 && state.follow) queue(recomputeAll); else updateStats();
 });
 $('optFollow').onchange = e => { state.follow = e.target.checked; save(); if (state.wps.length > 1) queue(recomputeAll); };
 $('optPaved').onchange = e => { state.paved = e.target.checked; if (!state.paved && !state.unpaved) state.unpaved = true; onSurfaceChange(); };
 $('optUnpaved').onchange = e => { state.unpaved = e.target.checked; if (!state.paved && !state.unpaved) state.paved = true; onSurfaceChange(); };
-function onSurfaceChange() { syncUI(); save(); if (state.wps.length > 1 && state.follow) queue(recomputeAll); }
+function onSurfaceChange() { state.surf[state.mode] = { paved: state.paved, unpaved: state.unpaved }; syncUI(); save(); if (state.wps.length > 1 && state.follow) queue(recomputeAll); }
 // Running: pace in min/km, steps of 15 s. Walking: speed in km/h, steps of 0.1 km/h.
 function stepTempo(dir) {
   if (state.mode === 'wandelen') {
@@ -1185,12 +1233,14 @@ function updateStats() {
   const saved = loadSaved();
   if (saved) {
     if (MODES[saved.mode]) state.mode = saved.mode;
-    if (typeof saved.paved === 'boolean') state.paved = saved.paved;
-    if (typeof saved.unpaved === 'boolean') state.unpaved = saved.unpaved;
-    if (!state.paved && !state.unpaved) state.paved = state.unpaved = true;
+    if (saved.surf && typeof saved.surf === 'object') for (const k in SURF_DEFAULTS) {
+      const s = saved.surf[k];
+      if (s && typeof s.paved === 'boolean' && typeof s.unpaved === 'boolean' && (s.paved || s.unpaved)) state.surf[k] = { paved: s.paved, unpaved: s.unpaved };
+    }
     if (typeof saved.follow === 'boolean') state.follow = saved.follow;
     if (saved.paces) for (const k in MODES) if (Number.isFinite(saved.paces[k])) state.paces[k] = saved.paces[k];
     if (saved.layer === 'topo' || saved.layer === 'osm') state.layer = saved.layer;
+    if (typeof saved.stats === 'boolean') state.stats = saved.stats;
     const h = saved.home;
     if (h && Number.isFinite(h.lat) && Number.isFinite(h.lng)) state.home = { lat: h.lat, lng: h.lng, name: String(h.name || 'Thuis').slice(0, 120) };
     for (const k of ['wu', 'cd']) if (saved[k] && typeof saved[k] === 'object') {
@@ -1203,7 +1253,9 @@ function updateStats() {
     }
     for (let i = 0; i < state.wps.length - 1; i++) state.segs[i] = straightSeg(state.wps[i], state.wps[i + 1]);
   }
+  applySurfForMode();
   setBaseLayer(state.layer);
+  syncStats(); loadGoatCounter();
   const hp = homePos(); map.setView(hp, state.home ? 15 : 14);
   syncUI(); syncHome(); refreshMarkers(); render();
   queue(() => ensureAround(hp[0], hp[1], 0.012, true).catch(() => {}), 'Kaartdata laden…');
