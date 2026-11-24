@@ -297,7 +297,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
     <div class="group" id="statsGroup" hidden>
       <h3>Statistieken</h3>
       <label class="switch"><span><b>Anonieme statistieken delen</b><small>Helpt de maker de app te verbeteren</small></span><input type="checkbox" id="optStats"><i></i></label>
-      <p class="note">Telt hoe vaak de app wordt gebruikt en het start- en eindpunt van routes, afgerond op ongeveer 1 km. Geen namen, adressen of cookies.</p>
+      <p class="note">Telt hoe vaak de app wordt gebruikt en in welke plaats routes beginnen en eindigen, zoals Garyp of Burgum. Geen adressen, namen of cookies.</p>
     </div>
     <p class="foot">Kaart en paden: © OpenStreetMap-bijdragers. Afstanden en tijden zijn een schatting.
       Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
@@ -941,7 +941,7 @@ $('gpx').onclick = async () => {
   const name = `${MODES[state.mode].label} ${km.replace('.', ',')} km`;
   const pts = [];
   state.segs.forEach((s, i) => { if (s) s.coords.forEach((c, j) => { if (!(i > 0 && j === 0)) pts.push(c); }); });
-  sendRouteStats();
+  sendRouteStats(true);
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Afstand" xmlns="http://www.topografix.com/GPX/1/1">\n'
     + `<metadata><name>${name}</name></metadata>\n<trk><name>${name}</name><trkseg>\n`
     + pts.map(c => `<trkpt lat="${c[0].toFixed(6)}" lon="${c[1].toFixed(6)}"></trkpt>`).join('\n')
@@ -996,25 +996,66 @@ function loadGoatCounter() {
 function syncStats() { $('statsGroup').hidden = !GC_CODE; $('optStats').checked = state.stats; }
 $('optStats').onchange = e => { state.stats = e.target.checked; save(); if (state.stats) loadGoatCounter(); };
 // One count per distinct route (activity + rounded start and end), sent once the route has been left alone for a while.
-function sendRouteStats() {
+// Place name (village or town) for a point; never the address itself.
+const placeCache = new Map();
+function placeName(lat, lng) {
+  const ck = lat.toFixed(3) + ',' + lng.toFixed(3);
+  if (!placeCache.has(ck)) {
+    const job = lookupPlace(lat, lng);
+    placeCache.set(ck, job);
+    job.then(n => { if (!n) placeCache.delete(ck); });
+  }
+  return placeCache.get(ck);
+}
+async function lookupPlace(lat, lng) {
+  let name = null;
+  try {
+    const j = await getJSON('https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse?'
+      + new URLSearchParams({ lat: lat.toFixed(5), lon: lng.toFixed(5), rows: '1', fl: 'woonplaatsnaam,gemeentenaam' }));
+    const d = j.response && j.response.docs && j.response.docs[0];
+    name = (d && (d.woonplaatsnaam || d.gemeentenaam)) || null;
+  } catch (e) { /* try the backup below */ }
+  if (!name) {
+    try {
+      const j = await getJSON('https://nominatim.openstreetmap.org/reverse?'
+        + new URLSearchParams({ lat: lat.toFixed(5), lon: lng.toFixed(5), format: 'jsonv2', zoom: '10', 'accept-language': 'nl' }));
+      const a = (j && j.address) || {};
+      name = a.village || a.town || a.city || a.municipality || null;
+      if (name && a.country_code && a.country_code !== 'nl') name += ' (' + a.country_code.toUpperCase() + ')';
+    } catch (e) { /* fall back to rounded coordinates */ }
+  }
+  return name ? String(name).slice(0, 80) : null;
+}
+// Only routes that were made or changed in this session are counted, once per route.
+let routeTouched = false, lastWpsSig = null;
+const wpsSig = () => state.wps.map(w => w.lat.toFixed(5) + ',' + w.lng.toFixed(5)).join(';');
+async function sendRouteStats(force) {
   clearTimeout(statsTimer);
-  if (!statsOn() || state.wps.length < 2) return;
+  if (!statsOn() || state.wps.length < 2 || !(routeTouched || force)) return;
   const gc = window.goatcounter;
   if (!gc || typeof gc.count !== 'function') return;
+  const s = state.wps[0], e = state.wps[state.wps.length - 1], mode = state.mode;
   const r = p => p.lat.toFixed(2) + ',' + p.lng.toFixed(2);
-  const start = r(state.wps[0]), end = r(state.wps[state.wps.length - 1]);
-  const key = state.mode + '|' + start + '|' + end;
+  const key = mode + '|' + r(s) + '|' + r(e);
   if (statsSent.has(key)) return;
-  statsSent.add(key);
+  statsSent.add(key); routeTouched = false;
+  const [ps, pe] = await Promise.all([placeName(s.lat, s.lng), placeName(e.lat, e.lng)]);
   try {
-    gc.count({ path: 'start-' + start, title: 'Startlocatie', event: true });
-    gc.count({ path: 'eind-' + end, title: 'Eindlocatie', event: true });
-    gc.count({ path: 'route-' + state.mode, title: 'Route: ' + MODES[state.mode].label.toLowerCase(), event: true });
-  } catch (e) { /* statistics are best effort */ }
+    gc.count({ path: 'start-' + (ps || r(s)), title: 'Startplaats', event: true });
+    gc.count({ path: 'eind-' + (pe || r(e)), title: 'Eindplaats', event: true });
+    gc.count({ path: 'route-' + mode, title: 'Route: ' + MODES[mode].label.toLowerCase(), event: true });
+  } catch (err) { /* statistics are best effort */ }
 }
 function scheduleStats() {
   clearTimeout(statsTimer);
-  if (statsOn() && state.wps.length >= 2) statsTimer = setTimeout(sendRouteStats, 45000);
+  const sig = wpsSig();
+  if (lastWpsSig !== null && sig !== lastWpsSig) routeTouched = true;
+  lastWpsSig = sig;
+  if (!statsOn() || state.wps.length < 2 || !routeTouched) return;
+  // look up the place names early, so they are ready when the app is closed
+  placeName(state.wps[0].lat, state.wps[0].lng);
+  const last = state.wps[state.wps.length - 1]; placeName(last.lat, last.lng);
+  statsTimer = setTimeout(sendRouteStats, 45000);
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') sendRouteStats(); });
 
@@ -1254,6 +1295,7 @@ function updateStats() {
     for (let i = 0; i < state.wps.length - 1; i++) state.segs[i] = straightSeg(state.wps[i], state.wps[i + 1]);
   }
   applySurfForMode();
+  lastWpsSig = wpsSig();
   setBaseLayer(state.layer);
   syncStats(); loadGoatCounter();
   const hp = homePos(); map.setView(hp, state.home ? 15 : 14);
