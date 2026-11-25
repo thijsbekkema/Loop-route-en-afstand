@@ -95,6 +95,31 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
   #toast{left:auto;right:16px;width:368px;margin:0}
 }
 
+.tabs{display:grid;grid-template-columns:1fr 1fr;margin:-4px -4px 12px;border-bottom:1px solid var(--line)}
+.tabs button{border:0;background:none;padding:10px 4px 11px;font-size:16px;font-weight:600;color:var(--muted);
+  border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--fries)}
+.loopStart{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 2px 10px}
+.loopStartText{min-width:0}
+.loopStartText b{display:block;font-size:13px;font-weight:600;color:var(--muted)}
+.loopStartText span{display:block;font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loopStartBtns{display:flex;gap:6px;flex:none}
+.small{border:0;background:var(--surface-2);border-radius:10px;padding:9px 10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.segm{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
+.segm button{border:0;background:transparent;border-radius:9px;padding:8px 4px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer}
+.segm button[aria-checked="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.loopVal{display:flex;align-items:center;gap:12px;padding:10px 0 0}
+.loopVal .mins{padding:0;flex:none}
+#loopEquiv{margin:0;flex:1}
+.loopBtns{display:grid;grid-template-columns:1fr;gap:8px;margin:14px 0 2px}
+.loopBtns.two{grid-template-columns:1fr 1fr}
+.primary,.secondary{border:0;border-radius:12px;padding:13px 8px;font-size:16px;font-weight:600;cursor:pointer}
+.primary{background:var(--fries);color:#fff}
+.secondary{background:var(--surface-2);color:var(--ink)}
+.loopResult{margin:10px 2px 0;font-size:14px;font-weight:600}
+.loopResult.ok{color:var(--polder)}
+.loopResult.off{color:var(--pompe)}
+@media (prefers-color-scheme: dark){ .loopResult.ok{color:#5CC27F} .loopResult.off{color:#FF7A86} }
 .modes{display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface-2);border-radius:12px;padding:3px;gap:3px}
 .modes button{border:0;background:transparent;border-radius:9px;padding:9px 4px;font-size:15px;font-weight:600;color:var(--muted);cursor:pointer}
 .modes button[aria-checked="true"]{background:var(--fries);color:#fff}
@@ -209,10 +234,39 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
 <div id="toast" role="alert"></div>
 
 <section id="sheet" aria-label="Route">
+  <div class="tabs" role="tablist" aria-label="Weergave">
+    <button role="tab" data-tab="tekenen">Route tekenen</button>
+    <button role="tab" data-tab="rondje">Rondje maken</button>
+  </div>
   <div class="modes" role="radiogroup" aria-label="Activiteit">
     <button role="radio" data-mode="hardlopen">Hardlopen</button>
     <button role="radio" data-mode="trail">Trailrunning</button>
     <button role="radio" data-mode="wandelen">Wandelen</button>
+  </div>
+
+  <div id="loopPanel" hidden>
+    <div class="loopStart">
+      <div class="loopStartText"><b>Startpunt</b><span id="loopStartText">Tik op de kaart of zoek een adres</span></div>
+      <div class="loopStartBtns"><button class="small" id="loopSearch">Zoek adres</button><button class="small" id="loopHere">Mijn locatie</button></div>
+    </div>
+    <div class="segm" role="radiogroup" aria-label="Doel">
+      <button role="radio" data-by="afstand">Afstand</button>
+      <button role="radio" data-by="tijd">Tijd</button>
+    </div>
+    <div class="loopVal">
+      <div class="mins">
+        <button id="loopMinus" aria-label="Minder">−</button>
+        <input id="loopInput" type="text" inputmode="decimal" aria-label="Gewenste afstand of tijd">
+        <span id="loopUnit">km</span>
+        <button id="loopPlus" aria-label="Meer">+</button>
+      </div>
+      <p class="note" id="loopEquiv"></p>
+    </div>
+    <div class="loopBtns" id="loopBtns">
+      <button class="primary" id="loopGo">Maak rondje</button>
+      <button class="secondary" id="loopNext" hidden>Andere route</button>
+    </div>
+    <p class="loopResult" id="loopResult" hidden></p>
   </div>
 
   <div class="readout">
@@ -303,7 +357,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
     <p class="foot">Kaart en paden: © OpenStreetMap-bijdragers. Afstanden en tijden zijn een schatting.
       Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
       <button class="link" id="clearCache">Opgeslagen kaartdata wissen</button></p>
-    <p class="version">Afstand · versie 1.10 · 24 november 2026</p>
+    <p class="version">Afstand · versie 1.11 · 25 november 2026</p>
   </div>
 </section>
 
@@ -472,7 +526,8 @@ class Graph {
     }
     return best;
   }
-  route(s, e, factors, minF, maxExpand = 800000) {
+  // used: optional Set of edge keys that get usedPenalty (to avoid running the same stretch twice in a loop)
+  route(s, e, factors, minF, maxExpand = 800000, used = null, usedPenalty = 1) {
     const S = -1, E = -2;
     const extra = new Map();
     const vc = new Map([[S, [s.lat, s.lon]], [E, [e.lat, e.lon]]]);
@@ -503,7 +558,9 @@ class Graph {
         if (!L) continue;
         for (const [v, d, wi] of L) {
           if (closed.has(v)) continue;
-          const ng = gu + d * factors[wi];
+          let f = factors[wi];
+          if (used && used.size && used.has(u < v ? u + '_' + v : v + '_' + u)) f *= usedPenalty;
+          const ng = gu + d * f;
           const old = g.get(v);
           if (old === undefined || ng < old) { g.set(v, ng); prev.set(v, [u, d, wi]); heap.push(v, ng + h(v)); }
         }
@@ -513,14 +570,16 @@ class Graph {
     const coords = [coord(E)];
     const byCat = { pad: 0, fiets: 0, weg: 0, vrij: 0 }, bySurf = { verhard: 0, onverhard: 0, onbekend: 0 };
     let dist = 0, cur = E;
+    const edges = [], edgeDist = [];
     while (cur !== S) {
       const [p, d, wi] = prev.get(cur);
       const w = this.ways[wi];
       dist += d; byCat[w.cat] += d; bySurf[w.surf] += d;
+      edges.push(p < cur ? p + '_' + cur : cur + '_' + p); edgeDist.push(d);
       cur = p; coords.push(coord(cur));
     }
     coords.reverse();
-    return { coords, dist, byCat, bySurf };
+    return { coords, dist, byCat, bySurf, edges, edgeDist };
   }
 }
 
@@ -553,16 +612,31 @@ const $ = id => document.getElementById(id);
 // Default surface choice per activity; changes are remembered per activity.
 const SURF_DEFAULTS = { hardlopen: { paved: true, unpaved: false }, trail: { paved: false, unpaved: true }, wandelen: { paved: true, unpaved: true } };
 const state = { mode: 'hardlopen', paved: true, unpaved: false, surf: JSON.parse(JSON.stringify(SURF_DEFAULTS)), follow: true, paces: { wandelen: 720, hardlopen: 360, trail: 420 },
-  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, layer: 'topo', home: null, stats: true, wps: [], segs: [] };
+  wu: { on: false, min: 10 }, cd: { on: false, min: 10 }, layer: 'topo', home: null, stats: true,
+  tab: 'tekenen', loop: { by: 'afstand', km: 10, min: 60, start: null }, wps: [], segs: [] };
+// Each tab keeps its own route; the inactive one is parked here.
+const routes = { tekenen: null, rondje: null };
+let loopStartMarker = null, loopCands = [], loopIdx = 0;
 const graph = new Graph();
 
 /* --- storage --- */
 function save() {
   try {
     localStorage.setItem(STORE, JSON.stringify({ mode: state.mode, paved: state.paved, unpaved: state.unpaved, follow: state.follow,
-      paces: state.paces, wu: state.wu, cd: state.cd, layer: state.layer, home: state.home, stats: state.stats, surf: state.surf, wps: state.wps.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]) }));
+      paces: state.paces, wu: state.wu, cd: state.cd, layer: state.layer, home: state.home, stats: state.stats, surf: state.surf, tab: state.tab, loop: state.loop, routes: routesOut(), loopSegs: loopSegsOut() }));
   } catch (e) { /* private mode or full */ }
   if (typeof scheduleStats === 'function') scheduleStats();
+}
+function routesOut() {
+  const out = (list) => list.map(w => [+w.lat.toFixed(6), +w.lng.toFixed(6)]);
+  const other = state.tab === 'tekenen' ? 'rondje' : 'tekenen';
+  return { [state.tab]: out(state.wps), [other]: routes[other] ? out(routes[other].wps) : [] };
+}
+// The generated loop is stored with its geometry, so it comes back exactly as it was made.
+function loopSegsOut() {
+  const segs = state.tab === 'rondje' ? state.segs : (routes.rondje ? routes.rondje.segs : []);
+  if (!segs.length || !segs.every(s => s)) return null;
+  return segs.map(s => ({ c: s.coords.map(p => [+p[0].toFixed(5), +p[1].toFixed(5)]), d: +s.dist.toFixed(1), k: s.byCat, u: s.bySurf, x: s.straight ? 1 : 0 }));
 }
 function loadSaved() { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } }
 
@@ -866,6 +940,7 @@ function makeMarker(wp) {
 }
 
 function render() {
+  syncLoopStartMarker();
   routeLayer.clearLayers();
   for (const s of state.segs) {
     if (!s) continue;
@@ -922,7 +997,8 @@ function clearAll() {
 
 map.on('click', e => {
   if (Date.now() < popupGuard) return;
-  addPointNow(e.latlng);
+  if (state.tab === 'rondje') setLoopStart(e.latlng, null);
+  else addPointNow(e.latlng);
 });
 
 $('undo').onclick = () => { const wp = state.wps[state.wps.length - 1]; if (wp) queue(() => deletePoint(wp)); };
@@ -1141,6 +1217,9 @@ async function usePlace(r, action) {
   if (action === 'show') {
     searchPin = L.marker(ll, { icon: L.divIcon({ className: 'search-pin', html: '<i></i>', iconSize: [28, 28], iconAnchor: [14, 14] }), interactive: false, keyboard: false }).addTo(map);
     map.setView(ll, 16);
+  } else if (action === 'start' && state.tab === 'rondje') {
+    map.setView(ll, Math.max(map.getZoom(), 15));
+    setLoopStart(ll, r.name);
   } else if (action === 'start') {
     map.setView(ll, Math.max(map.getZoom(), 15));
     if (!state.wps.length) addPointNow(ll);
@@ -1157,12 +1236,17 @@ function applySurfForMode() { const s = state.surf[state.mode]; state.paved = s.
 document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
   if (state.mode === b.dataset.mode) return;
   state.mode = b.dataset.mode; applySurfForMode(); syncUI(); save();
-  if (state.wps.length > 1 && state.follow) queue(recomputeAll); else updateStats();
+  refreshRoute();
 });
 $('optFollow').onchange = e => { state.follow = e.target.checked; save(); if (state.wps.length > 1) queue(recomputeAll); };
 $('optPaved').onchange = e => { state.paved = e.target.checked; if (!state.paved && !state.unpaved) state.unpaved = true; onSurfaceChange(); };
 $('optUnpaved').onchange = e => { state.unpaved = e.target.checked; if (!state.paved && !state.unpaved) state.paved = true; onSurfaceChange(); };
-function onSurfaceChange() { state.surf[state.mode] = { paved: state.paved, unpaved: state.unpaved }; syncUI(); save(); if (state.wps.length > 1 && state.follow) queue(recomputeAll); }
+function onSurfaceChange() { state.surf[state.mode] = { paved: state.paved, unpaved: state.unpaved }; syncUI(); save(); refreshRoute(); }
+function refreshRoute() {
+  if (state.tab === 'rondje' && state.wps.length > 1) queue(runLoop);
+  else if (state.wps.length > 1 && state.follow) queue(recomputeAll);
+  else updateStats();
+}
 // Running: pace in min/km, steps of 15 s. Walking: speed in km/h, steps of 0.1 km/h.
 function stepTempo(dir) {
   if (state.mode === 'wandelen') {
@@ -1210,6 +1294,7 @@ function syncUI() {
     $(k + 'Row').hidden = !state[k].on;
     if (document.activeElement !== $(k + 'Min')) $(k + 'Min').value = state[k].min;
   }
+  if (typeof syncLoopUI === 'function') syncLoopUI();
   $('extraNote').textContent = 'Extra kilometers rekenen met je wandelsnelheid (' + fmtTempo('wandelen') + ').';
 }
 
@@ -1244,7 +1329,8 @@ function updateStats() {
   }
   const showNums = n >= 2;
   $('hint').hidden = showNums;
-  $('hint').textContent = n === 0 ? 'Tik op de kaart om je startpunt te kiezen, of zoek een adres met het vergrootglas.' : 'Startpunt staat. Tik op de kaart voor je volgende punt.';
+  $('hint').textContent = state.tab === 'rondje' ? 'Kies een startpunt en een afstand of tijd, en tik op Maak rondje.'
+    : (n === 0 ? 'Tik op de kaart om je startpunt te kiezen, of zoek een adres met het vergrootglas.' : 'Startpunt staat. Tik op de kaart voor je volgende punt.');
   $('distBox').hidden = $('timeBox').hidden = $('miniBar').hidden = !showNums;
   if (total < 1000) { $('distVal').textContent = Math.round(total); $('distUnit').textContent = 'm'; }
   else { $('distVal').textContent = (total >= 100000 ? nf1 : nf2).format(total / 1000); $('distUnit').textContent = 'km'; }
@@ -1268,12 +1354,187 @@ function updateStats() {
   else if (viaOsmDown) issue = 'OSM-kaartdata is nu niet beschikbaar. Route via reserveplanner; verhard/onverhard telt even niet mee.';
   else if (viaFar) issue = 'Lange afstand: route via reserveplanner; verhard/onverhard telt hier niet mee.';
   $('issue').hidden = !issue; $('issueText').textContent = issue; $('retry').hidden = !(failed || viaOsmDown);
-  $('undo').hidden = n === 0; $('loop').hidden = n < 2; $('clear').disabled = n === 0; $('gpx').disabled = n < 2;
+  const loopTab = state.tab === 'rondje';
+  $('undo').hidden = n === 0 || loopTab; $('loop').hidden = n < 2 || loopTab;
+  const lr = $('loopResult');
+  lr.hidden = !(loopTab && n >= 2);
+  if (loopTab && n >= 2) {
+    const tKm = loopTargetKm(), dev = (total / 1000 - tKm) / tKm, pct = Math.round(dev * 100);
+    const goal = state.loop.by === 'afstand' ? 'Doel ' + nf1.format(tKm) + ' km' : 'Doel ' + state.loop.min + ' min';
+    const ok = Math.abs(dev) <= 0.1;
+    lr.textContent = goal + ' · afwijking ' + (pct > 0 ? '+' : '') + pct + '% · ' + (ok ? 'binnen 10%' : 'meer dan 10%');
+    lr.className = 'loopResult ' + (ok ? 'ok' : 'off');
+  } $('clear').disabled = n === 0; $('gpx').disabled = n < 2;
+}
+
+/* --- tabs --- */
+function syncTabUI() {
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === state.tab)));
+  $('loopPanel').hidden = state.tab !== 'rondje';
+  syncLoopUI(); updateStats();
+}
+function switchTab(tab) {
+  if (tab === state.tab) return;
+  sendRouteStats();
+  for (const wp of state.wps) map.removeLayer(wp.marker);
+  routes[state.tab] = { wps: state.wps, segs: state.segs, stale: false };
+  state.tab = tab;
+  const r = routes[tab] || { wps: [], segs: [], stale: false };
+  routes[tab] = null;
+  state.wps = r.wps; state.segs = r.segs;
+  for (const wp of state.wps) wp.marker.addTo(map);
+  if (tab === 'rondje' && !state.loop.start && state.home) state.loop.start = { lat: state.home.lat, lng: state.home.lng, name: state.home.name };
+  lastWpsSig = wpsSig(); routeTouched = false;
+  refreshMarkers(); render(); syncTabUI(); save();
+  const needs = r.stale || state.segs.some(s => s && s.straight && !s.failed);
+  if (needs && state.wps.length > 1 && state.follow) queue(recomputeAll);
+}
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+
+/* --- loop generator ("Rondje maken") --- */
+function loopTargetKm() { return state.loop.by === 'afstand' ? state.loop.km : state.loop.min * 60 / state.paces[state.mode]; }
+function fmtMinutes(m) { m = Math.round(m); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' u ' + (m % 60) + ' min'; }
+function syncLoopUI() {
+  const L0 = state.loop, km = loopTargetKm();
+  $('loopStartText').textContent = L0.start ? (L0.start.name || 'Punt op de kaart') : 'Tik op de kaart of zoek een adres';
+  document.querySelectorAll('.segm button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.by === L0.by)));
+  if (document.activeElement !== $('loopInput')) $('loopInput').value = L0.by === 'afstand' ? nf1.format(L0.km) : String(L0.min);
+  $('loopInput').inputMode = L0.by === 'afstand' ? 'decimal' : 'numeric';
+  $('loopUnit').textContent = L0.by === 'afstand' ? 'km' : 'min';
+  $('loopEquiv').textContent = (L0.by === 'afstand' ? '≈ ' + fmtMinutes(km * state.paces[state.mode] / 60) : '≈ ' + nf1.format(km) + ' km')
+    + ' bij ' + fmtTempo(state.mode) + ', zonder warming-up en cooling-down';
+  const hasRoute = state.wps.length >= 2;
+  $('loopNext').hidden = !hasRoute;
+  $('loopBtns').classList.toggle('two', hasRoute);
+  $('loopGo').textContent = hasRoute ? 'Opnieuw maken' : 'Maak rondje';
+}
+function syncLoopStartMarker() {
+  const show = state.tab === 'rondje' && state.loop.start && state.wps.length === 0;
+  if (!show) { if (loopStartMarker) { map.removeLayer(loopStartMarker); loopStartMarker = null; } return; }
+  const ll = [state.loop.start.lat, state.loop.start.lng];
+  if (!loopStartMarker) {
+    loopStartMarker = L.marker(ll, { icon: icons.start, draggable: true, keyboard: false, zIndexOffset: 1000 }).addTo(map);
+    loopStartMarker.on('dragend', () => setLoopStart(loopStartMarker.getLatLng(), null));
+  } else loopStartMarker.setLatLng(ll);
+}
+function setLoopStart(ll, name) {
+  state.loop.start = { lat: ll.lat, lng: ll.lng, name: name || null };
+  loopCands = []; loopIdx = 0;
+  if (state.wps.length) clearAll();
+  syncLoopUI(); render(); save();
+}
+function setLoopVal(v) {
+  if (!Number.isFinite(v)) { syncLoopUI(); return; }
+  if (state.loop.by === 'afstand') state.loop.km = Math.min(50, Math.max(1, Math.round(v * 10) / 10));
+  else state.loop.min = Math.min(300, Math.max(5, Math.round(v)));
+  syncLoopUI(); updateStats(); save();
+}
+const loopInputVal = () => parseFloat($('loopInput').value.replace(',', '.'));
+$('loopInput').addEventListener('change', () => setLoopVal(loopInputVal()));
+$('loopInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loopInput').blur(); });
+$('loopMinus').onclick = () => setLoopVal(state.loop.by === 'afstand' ? state.loop.km - 1 : state.loop.min - 5);
+$('loopPlus').onclick = () => setLoopVal(state.loop.by === 'afstand' ? state.loop.km + 1 : state.loop.min + 5);
+document.querySelectorAll('.segm button').forEach(b => b.onclick = () => { state.loop.by = b.dataset.by; syncLoopUI(); updateStats(); save(); });
+$('loopSearch').onclick = () => { window.scrollTo(0, 0); openSearch(); };
+$('loopHere').onclick = () => {
+  if (!navigator.geolocation) { toast('Locatie is niet beschikbaar op dit apparaat.'); return; }
+  setStatus('Locatie zoeken…');
+  navigator.geolocation.getCurrentPosition(p => {
+    if (!pending) clearStatus();
+    const ll = L.latLng(p.coords.latitude, p.coords.longitude);
+    setLoopStart(ll, 'Mijn locatie'); map.setView(ll, 15);
+  }, () => { if (!pending) clearStatus(); toast('Locatie niet gevonden. Sta locatietoegang toe via Instellingen.'); },
+  { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+};
+$('loopGo').onclick = () => queue(runLoop);
+$('loopNext').onclick = () => {
+  if (loopIdx + 1 < loopCands.length) { loopIdx++; applyLoop(loopCands[loopIdx]); }
+  else queue(runLoop);
+};
+function offsetLL(lat, lng, bearing, dist) {
+  const b = bearing * Math.PI / 180;
+  return [lat + dist * Math.cos(b) / 110574, lng + dist * Math.sin(b) / (111320 * Math.cos(lat * Math.PI / 180))];
+}
+// A loop through three waypoints on a circle that passes through the start; edges used earlier in the loop cost more.
+async function buildLoop(start, R, bearing) {
+  const C = offsetLL(start.lat, start.lng, bearing, R);
+  const pts = [1, 2, 3].map(k => offsetLL(C[0], C[1], bearing + 180 + k * 90, R));
+  const lats = [start.lat, ...pts.map(p => p[0])], lngs = [start.lng, ...pts.map(p => p[1])], m = 0.006;
+  await ensureBBox(Math.min(...lats) - m, Math.min(...lngs) - m * 1.6, Math.max(...lats) + m, Math.max(...lngs) + m * 1.6);
+  const s0 = graph.nearest(start.lat, start.lng);
+  if (!s0 || s0.d > SNAP_MAX) throw new Error('nostart');
+  const seq = [s0];
+  for (const p of pts) { const s = graph.nearest(p[0], p[1]); if (!s || s.d > 900) return null; seq.push(s); }
+  seq.push(s0);
+  const f = factors(), minF = minFactor(state.mode, state), used = new Set(), legs = [];
+  let dist = 0, overlap = 0;
+  for (let i = 0; i < 4; i++) {
+    const r = graph.route(seq[i], seq[i + 1], f, minF, 600000, used, 3);
+    if (!r) return null;
+    r.edges.forEach((k, j) => { if (used.has(k)) overlap += r.edgeDist[j]; });
+    r.edges.forEach(k => used.add(k));
+    legs.push(r); dist += r.dist;
+  }
+  return { seq, legs, dist, overlap: dist ? overlap / dist : 0, bearing };
+}
+async function generateLoop(start, target) {
+  const found = [], offset = Math.random() * 360;
+  outer:
+  for (let k = 0; k < 8; k++) {
+    const bearing = (offset + k * 45) % 360;
+    let R = target / 7.2, best = null;
+    for (let it = 0; it < 5; it++) {
+      setStatus('Rondje zoeken… ' + (k + 1) + '/8');
+      await new Promise(res => setTimeout(res, 0));
+      let c = null;
+      try { c = await buildLoop(start, R, bearing); }
+      catch (e) {
+        if (e && e.message === 'nostart') throw e;
+        if (e instanceof LoadError || e instanceof TooFar) { if (found.length) break outer; throw e; }
+      }
+      if (!c) { R *= 0.85; continue; }
+      c.dev = (c.dist - target) / target;
+      if (!best || Math.abs(c.dev) < Math.abs(best.dev)) best = c;
+      if (Math.abs(c.dev) <= 0.05) break;
+      R *= Math.min(1.6, Math.max(0.6, target / c.dist));
+    }
+    if (best) { best.score = Math.abs(best.dev) + 0.8 * best.overlap; found.push(best); }
+    if (found.filter(c => Math.abs(c.dev) <= 0.1).length >= 3) break;
+  }
+  const good = found.filter(c => Math.abs(c.dev) <= 0.1).sort((a, b) => a.score - b.score);
+  return good.length ? good : found.sort((a, b) => Math.abs(a.dev) - Math.abs(b.dev)).slice(0, 1);
+}
+async function runLoop() {
+  if (!state.loop.start) { toast('Kies eerst een startpunt: tik op de kaart of zoek een adres.'); return; }
+  osmBackoffUntil = 0;
+  let cands;
+  try { cands = await generateLoop(state.loop.start, loopTargetKm() * 1000); }
+  catch (e) {
+    if (e instanceof TooFar) toast('Dit rondje is te groot om te plannen. Kies een kortere afstand of tijd.');
+    else if (e && e.message === 'nostart') toast('Geen pad of weg in de buurt van je startpunt. Kies een punt dichter bij een weg.');
+    else toast('Kaartdata kon niet worden geladen' + (osmLastError ? ': ' + osmLastError : '') + '. Probeer het zo opnieuw.');
+    return;
+  }
+  if (!cands.length) { toast('Geen rondje gevonden vanaf dit punt. Probeer een ander startpunt of een andere afstand.'); return; }
+  loopCands = cands; loopIdx = 0; applyLoop(cands[0]);
+  if (Math.abs(cands[0].dev) > 0.1) toast('Er past geen rondje binnen 10% van je doel. Dit is het dichtstbijzijnde.');
+  if (statsOn() && window.goatcounter && typeof window.goatcounter.count === 'function') {
+    try { window.goatcounter.count({ path: 'functie-rondje-maken', title: 'Rondje maken', event: true }); } catch (e) { /* best effort */ }
+  }
+}
+function applyLoop(c) {
+  for (const wp of state.wps) map.removeLayer(wp.marker);
+  state.wps = c.seq.map(s => { const wp = { lat: s.lat, lng: s.lon }; wp.marker = makeMarker(wp); return wp; });
+  state.segs = c.legs.map(r => ({ coords: r.coords, dist: r.dist, byCat: Object.assign({}, r.byCat), bySurf: Object.assign({}, r.bySurf), straight: false, source: 'osm' }));
+  refreshMarkers(); render(); save(); syncLoopUI();
+  const all = []; state.segs.forEach(s => s.coords.forEach(p => all.push(p)));
+  if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [30, 30], maxZoom: 16 });
 }
 
 /* --- start --- */
 (function init() {
   const saved = loadSaved();
+  let activeStale = true;
   if (saved) {
     if (MODES[saved.mode]) state.mode = saved.mode;
     if (saved.surf && typeof saved.surf === 'object') for (const k in SURF_DEFAULTS) {
@@ -1290,20 +1551,39 @@ function updateStats() {
       state[k].on = saved[k].on === true;
       if (Number.isFinite(saved[k].min)) state[k].min = Math.min(90, Math.max(1, Math.round(saved[k].min)));
     }
-    if (Array.isArray(saved.wps)) for (const p of saved.wps) {
-      if (!Array.isArray(p) || !Number.isFinite(p[0]) || !Number.isFinite(p[1])) continue;
-      const wp = { lat: p[0], lng: p[1] }; wp.marker = makeMarker(wp); state.wps.push(wp);
+    if (saved.tab === 'rondje') state.tab = 'rondje';
+    const lp = saved.loop;
+    if (lp && typeof lp === 'object') {
+      if (lp.by === 'afstand' || lp.by === 'tijd') state.loop.by = lp.by;
+      if (Number.isFinite(lp.km)) state.loop.km = Math.min(50, Math.max(1, lp.km));
+      if (Number.isFinite(lp.min)) state.loop.min = Math.min(300, Math.max(5, Math.round(lp.min)));
+      const s = lp.start;
+      if (s && Number.isFinite(s.lat) && Number.isFinite(s.lng)) state.loop.start = { lat: s.lat, lng: s.lng, name: s.name ? String(s.name).slice(0, 120) : null };
     }
-    for (let i = 0; i < state.wps.length - 1; i++) state.segs[i] = straightSeg(state.wps[i], state.wps[i + 1]);
+    const savedRoutes = (saved.routes && typeof saved.routes === 'object') ? saved.routes : { tekenen: saved.wps };
+    for (const tab of ['tekenen', 'rondje']) {
+      const list = (Array.isArray(savedRoutes[tab]) ? savedRoutes[tab] : [])
+        .filter(p => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+        .map(p => { const wp = { lat: p[0], lng: p[1] }; wp.marker = makeMarker(wp); return wp; });
+      let segs = [], stale = true;
+      const ls = saved.loopSegs;
+      if (tab === 'rondje' && Array.isArray(ls) && list.length > 1 && ls.length === list.length - 1
+          && ls.every(o => o && Array.isArray(o.c) && o.c.length > 1 && Number.isFinite(o.d) && o.k && o.u)) {
+        segs = ls.map(o => ({ coords: o.c, dist: o.d, byCat: o.k, bySurf: o.u, straight: !!o.x, source: 'osm' }));
+        stale = false;
+      } else for (let i = 0; i < list.length - 1; i++) segs[i] = straightSeg(list[i], list[i + 1]);
+      if (tab === state.tab) { state.wps = list; state.segs = segs; activeStale = stale; }
+      else { list.forEach(wp => map.removeLayer(wp.marker)); routes[tab] = { wps: list, segs, stale }; }
+    }
   }
   applySurfForMode();
   lastWpsSig = wpsSig();
   setBaseLayer(state.layer);
   syncStats(); loadGoatCounter();
   const hp = homePos(); map.setView(hp, state.home ? 15 : 14);
-  syncUI(); syncHome(); refreshMarkers(); render();
+  syncUI(); syncHome(); syncTabUI(); refreshMarkers(); render();
   queue(() => ensureAround(hp[0], hp[1], 0.012, true).catch(() => {}), 'Kaartdata laden…');
-  if (state.wps.length > 1 && state.follow) queue(recomputeAll);
+  if (activeStale && state.wps.length > 1 && state.follow) queue(recomputeAll);
 })();
 </script>
 </body>
