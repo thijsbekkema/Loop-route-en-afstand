@@ -357,7 +357,8 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
     <p class="foot">Kaart en paden: © OpenStreetMap-bijdragers. Afstanden en tijden zijn een schatting.
       Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
       <button class="link" id="clearCache">Opgeslagen kaartdata wissen</button></p>
-    <p class="version">Afstand · versie 1.11 · 25 november 2026</p>
+    <p class="foot" id="regionNote" hidden></p>
+    <p class="version">Afstand · versie 1.12 · 25 november 2026</p>
   </div>
 </section>
 
@@ -731,12 +732,29 @@ function osmReason(e) {
 let osmBackoffUntil = 0, osmFailCount = 0, osmLastError = null;
 class LoadError extends Error {}
 const withTimeout = (p, ms, fallback) => Promise.race([p, new Promise(r => setTimeout(() => r(fallback), ms))]);
+/* --- path tiles for the region around Garyp, prepared monthly by a GitHub Action (paden/v1) --- */
+const REGION_BASE = 'paden/v1/';
+let regionInfo = null;
+const regionReady = fetch(REGION_BASE + 'index.json', { cache: 'no-cache' })
+  .then(r => (r.ok ? r.json() : null))
+  .then(j => { if (j && Array.isArray(j.i) && Array.isArray(j.j) && j.tileLat === TILE_LAT && j.tileLon === TILE_LON) regionInfo = j; })
+  .catch(() => {});
+const inRegionTile = (i, j) => !!regionInfo && i >= regionInfo.i[0] && i <= regionInfo.i[1] && j >= regionInfo.j[0] && j <= regionInfo.j[1];
+const inRegionPoint = (lat, lng) => inRegionTile(Math.floor(lat / TILE_LAT), Math.floor(lng / TILE_LON));
 const tileJobs = new Map(), tilesDone = new Set();
 const tileKey = (i, j) => TILE_VER + ':' + i + ':' + j;
 function loadTile(i, j) {
   const key = tileKey(i, j);
   if (tileJobs.has(key)) return tileJobs.get(key);
   const job = (async () => {
+    await regionReady;
+    if (inRegionTile(i, j)) {
+      const r = await fetch(REGION_BASE + i + '_' + j + '.json?v=' + encodeURIComponent(regionInfo.gemaakt || ''));
+      if (!r.ok) throw new HttpError(r.status);
+      const ways = await r.json();
+      for (const w of ways) graph.addWay(w);
+      return;
+    }
     const cached = await withTimeout(idb.get(key), 1500, null);
     if (cached && Array.isArray(cached.w) && Date.now() - cached.t < TILE_MAX_AGE) { for (const w of cached.w) graph.addWay(w); return; }
     const f = x => x.toFixed(4);
@@ -750,23 +768,26 @@ function loadTile(i, j) {
   return job;
 }
 async function ensureBBox(s, w, n, e, quiet) {
+  await regionReady;
   const todo = [];
   for (let i = Math.floor(s / TILE_LAT); i <= Math.floor(n / TILE_LAT); i++)
     for (let j = Math.floor(w / TILE_LON); j <= Math.floor(e / TILE_LON); j++)
       if (!tilesDone.has(tileKey(i, j))) todo.push([i, j]);
   if (!todo.length) return;
   if (todo.length > MAX_TILES_PER_STEP) throw new TooFar();
-  if (Date.now() < osmBackoffUntil) throw new LoadError(osmLastError);
+  const remote = todo.filter(([i, j]) => !inRegionTile(i, j)).length;
+  if (remote && Date.now() < osmBackoffUntil) throw new LoadError(osmLastError);
   const total = todo.length; let done = 0, next = 0, err = null;
-  if (!quiet) setStatus(total > 1 ? `Kaartdata laden… 0/${total}` : 'Kaartdata laden…');
+  const label = remote ? 'Kaartdata laden…' : 'Paden laden…';
+  if (!quiet) setStatus(total > 1 ? `${label} 0/${total}` : label);
   const worker = async () => {
     while (next < todo.length) {
       const [i, j] = todo[next++];
       try { await loadTile(i, j); } catch (e) { err = err || e; }
-      done++; if (!quiet && total > 1) setStatus(`Kaartdata laden… ${done}/${total}`);
+      done++; if (!quiet && total > 1) setStatus(`${label} ${done}/${total}`);
     }
   };
-  await Promise.all([worker(), worker()]);
+  await Promise.all(remote ? [worker(), worker()] : [worker(), worker(), worker(), worker()]);
   if (!quiet) setStatus('Route berekenen…');
   if (err) {
     osmFailCount++; osmLastError = osmReason(err);
@@ -789,7 +810,54 @@ function straightSeg(A, B) {
   return { coords: [[A.lat, A.lng], [B.lat, B.lng]], dist: d, byCat: { pad: 0, fiets: 0, weg: 0, vrij: d },
     bySurf: { verhard: 0, onverhard: 0, onbekend: d }, straight: true };
 }
+/* --- OpenRouteService: outside the region (and as backup) when ORS_KEY is set in config.js --- */
+const ORS_KEY = String(window.ORS_KEY || '').trim();
+const ORS_PROFILE = { hardlopen: 'foot-walking', trail: 'foot-hiking', wandelen: 'foot-hiking' };
+const ORS_WAY = { 4: 'pad', 5: 'pad', 7: 'pad', 8: 'pad', 6: 'fiets' };
+const ORS_PAVED = new Set([1, 3, 4, 5, 6, 7, 14]), ORS_UNPAVED = new Set([2, 8, 9, 10, 11, 12, 15, 16, 17, 18]);
+async function orsRequest(body) {
+  const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 15000);
+  try {
+    const r = await fetch('https://api.openrouteservice.org/v2/directions/' + ORS_PROFILE[state.mode] + '/geojson', {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'Authorization': ORS_KEY, 'Content-Type': 'application/json', 'Accept': 'application/geo+json, application/json' },
+      body: JSON.stringify(Object.assign({ instructions: false, extra_info: ['waytype', 'surface'] }, body)) });
+    if (!r.ok) throw new HttpError(r.status);
+    const f = (await r.json()).features[0];
+    if (!f || !f.geometry || f.geometry.coordinates.length < 2) throw new Error('geen route');
+    return f;
+  } finally { clearTimeout(to); }
+}
+function orsToSeg(f, why) {
+  const coords = f.geometry.coordinates.map(c => [c[1], c[0]]);
+  let dist = 0;
+  for (let k = 1; k < coords.length; k++) dist += hav(coords[k - 1][0], coords[k - 1][1], coords[k][0], coords[k][1]);
+  const byCat = { pad: 0, fiets: 0, weg: 0, vrij: 0 }, bySurf = { verhard: 0, onverhard: 0, onbekend: 0 };
+  const ex = (f.properties && f.properties.extras) || {};
+  const summary = x => (x && Array.isArray(x.summary) ? x.summary : []);
+  let tw = 0, ts = 0;
+  for (const s of summary(ex.waytypes || ex.waytype)) { byCat[ORS_WAY[s.value] || 'weg'] += s.distance; tw += s.distance; }
+  for (const s of summary(ex.surface)) {
+    bySurf[ORS_PAVED.has(s.value) ? 'verhard' : ORS_UNPAVED.has(s.value) ? 'onverhard' : 'onbekend'] += s.distance; ts += s.distance;
+  }
+  if (tw > 0) for (const k in byCat) byCat[k] *= dist / tw; else byCat.weg = dist;
+  if (ts > 0) for (const k in bySurf) bySurf[k] *= dist / ts; else bySurf.onbekend = dist;
+  return { coords, dist, byCat, bySurf, straight: false, source: 'ors', why };
+}
+async function orsSeg(A, B, why) {
+  setStatus('Route berekenen via OpenRouteService…');
+  const seg = orsToSeg(await orsRequest({ coordinates: [[A.lng, A.lat], [B.lng, B.lat]] }), why);
+  const c0 = seg.coords[0], c1 = seg.coords[seg.coords.length - 1];
+  const da = hav(A.lat, A.lng, c0[0], c0[1]), db = hav(B.lat, B.lng, c1[0], c1[1]);
+  if (da > 1) { seg.coords.unshift([A.lat, A.lng]); seg.dist += da; seg.byCat.vrij += da; seg.bySurf.onbekend += da; }
+  if (db > 1) { seg.coords.push([B.lat, B.lng]); seg.dist += db; seg.byCat.vrij += db; seg.bySurf.onbekend += db; }
+  return seg;
+}
+const useOrsAt = (...pts) => !!ORS_KEY && pts.some(p => !inRegionPoint(p.lat, p.lng));
+
 async function snapWp(wp) {
+  await regionReady;
+  if (useOrsAt(wp)) return; // OpenRouteService snaps by itself
   try { await ensureAround(wp.lat, wp.lng, 0.008); } catch (e) { return; }
   const s = graph.nearest(wp.lat, wp.lng);
   if (s && s.d <= SNAP_MAX) { wp.lat = s.lat; wp.lng = s.lon; wp.marker.setLatLng([s.lat, s.lon]); }
@@ -839,9 +907,11 @@ async function brouterSeg(A, B) {
 async function computeSeg(i) {
   const A = state.wps[i], B = state.wps[i + 1];
   if (!A || !B) return;
-  let seg = null, why = null;
+  let seg = null, why = null, triedOrs = false;
   if (state.follow) {
-    try {
+    await regionReady;
+    if (useOrsAt(A, B)) { triedOrs = true; try { seg = await orsSeg(A, B, 'buiten'); } catch (e) { seg = null; } }
+    if (!seg) try {
       const span = Math.max(Math.abs(A.lat - B.lat), Math.abs(A.lng - B.lng));
       const m = Math.max(0.006, span * 0.2);
       await ensureBBox(Math.min(A.lat, B.lat) - m, Math.min(A.lng, B.lng) - m * 1.6, Math.max(A.lat, B.lat) + m, Math.max(A.lng, B.lng) + m * 1.6);
@@ -857,7 +927,8 @@ async function computeSeg(i) {
     } catch (e) {
       why = e instanceof TooFar ? 'far' : 'osm';
     }
-    if (why) {
+    if (why && ORS_KEY && !triedOrs) { try { seg = await orsSeg(A, B, why); } catch (e) { seg = null; } }
+    if (why && !seg) {
       setStatus('Route berekenen via BRouter…');
       try { seg = await brouterSeg(A, B); seg.why = why; } catch (e) { seg = null; }
     }
@@ -1347,12 +1418,14 @@ function updateStats() {
   fillBar($('miniBar'), CAT, cat); fillBar($('barCat'), CAT, cat); fillBar($('barSurf'), SURF, surf);
   fillLegend($('legCat'), CAT, cat, total); fillLegend($('legSurf'), SURF, surf, total);
   const failed = state.follow && state.segs.some(s => s && s.failed);
-  const viaOsmDown = state.follow && state.segs.some(s => s && s.source === 'brouter' && s.why === 'osm');
-  const viaFar = state.follow && state.segs.some(s => s && s.source === 'brouter' && s.why === 'far');
+  const viaOsmDown = state.follow && state.segs.some(s => s && s.source !== 'osm' && s.why === 'osm');
+  const viaFar = state.follow && state.segs.some(s => s && s.source !== 'osm' && s.why === 'far');
+  const viaOutside = state.follow && state.segs.some(s => s && s.source === 'ors' && s.why === 'buiten');
   let issue = '';
   if (failed) issue = 'Geen route: ' + (osmLastError || 'kaartdata niet beschikbaar') + '. Er staan nu rechte lijnen.';
   else if (viaOsmDown) issue = 'OSM-kaartdata is nu niet beschikbaar. Route via reserveplanner; verhard/onverhard telt even niet mee.';
   else if (viaFar) issue = 'Lange afstand: route via reserveplanner; verhard/onverhard telt hier niet mee.';
+  else if (viaOutside) issue = 'Buiten de regio rond Garyp: route via OpenRouteService; verhard/onverhard telt hier niet mee.';
   $('issue').hidden = !issue; $('issueText').textContent = issue; $('retry').hidden = !(failed || viaOsmDown);
   const loopTab = state.tab === 'rondje';
   $('undo').hidden = n === 0 || loopTab; $('loop').hidden = n < 2 || loopTab;
@@ -1366,6 +1439,14 @@ function updateStats() {
     lr.className = 'loopResult ' + (ok ? 'ok' : 'off');
   } $('clear').disabled = n === 0; $('gpx').disabled = n < 2;
 }
+
+regionReady.then(() => {
+  if (!regionInfo) return;
+  const d = new Date(regionInfo.gemaakt + 'T12:00:00');
+  $('regionNote').textContent = 'Paden rond Garyp (50 × 50 km) bijgewerkt op '
+    + (isNaN(d) ? regionInfo.gemaakt : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' })) + '.';
+  $('regionNote').hidden = false;
+});
 
 /* --- tabs --- */
 function syncTabUI() {
@@ -1507,25 +1588,47 @@ async function generateLoop(start, target) {
 async function runLoop() {
   if (!state.loop.start) { toast('Kies eerst een startpunt: tik op de kaart of zoek een adres.'); return; }
   osmBackoffUntil = 0;
-  let cands;
-  try { cands = await generateLoop(state.loop.start, loopTargetKm() * 1000); }
+  await regionReady;
+  const start = state.loop.start, target = loopTargetKm() * 1000;
+  let cands = null;
+  if (useOrsAt(start)) { try { cands = await orsLoops(start, target); } catch (e) { cands = null; } }
+  if (!cands || !cands.length) try { cands = await generateLoop(start, target); }
   catch (e) {
-    if (e instanceof TooFar) toast('Dit rondje is te groot om te plannen. Kies een kortere afstand of tijd.');
-    else if (e && e.message === 'nostart') toast('Geen pad of weg in de buurt van je startpunt. Kies een punt dichter bij een weg.');
-    else toast('Kaartdata kon niet worden geladen' + (osmLastError ? ': ' + osmLastError : '') + '. Probeer het zo opnieuw.');
-    return;
+    if (ORS_KEY && !(e && e.message === 'nostart')) {
+      try { cands = await orsLoops(start, target); } catch (e2) { cands = null; }
+      if (cands && cands.length) e = null;
+    }
+    if (!e) { /* OpenRouteService found the loops */ }
+    else if (e instanceof TooFar) { toast('Dit rondje is te groot om te plannen. Kies een kortere afstand of tijd.'); return; }
+    else if (e && e.message === 'nostart') { toast('Geen pad of weg in de buurt van je startpunt. Kies een punt dichter bij een weg.'); return; }
+    else { toast('Kaartdata kon niet worden geladen' + (osmLastError ? ': ' + osmLastError : '') + '. Probeer het zo opnieuw.'); return; }
   }
-  if (!cands.length) { toast('Geen rondje gevonden vanaf dit punt. Probeer een ander startpunt of een andere afstand.'); return; }
+  if (!cands || !cands.length) { toast('Geen rondje gevonden vanaf dit punt. Probeer een ander startpunt of een andere afstand.'); return; }
   loopCands = cands; loopIdx = 0; applyLoop(cands[0]);
   if (Math.abs(cands[0].dev) > 0.1) toast('Er past geen rondje binnen 10% van je doel. Dit is het dichtstbijzijnde.');
   if (statsOn() && window.goatcounter && typeof window.goatcounter.count === 'function') {
     try { window.goatcounter.count({ path: 'functie-rondje-maken', title: 'Rondje maken', event: true }); } catch (e) { /* best effort */ }
   }
 }
+async function orsLoops(start, target) {
+  const found = [], base = Math.floor(Math.random() * 1000);
+  for (let k = 0; k < 5; k++) {
+    setStatus('Rondje zoeken via OpenRouteService… ' + (k + 1) + '/5');
+    let f;
+    try { f = await orsRequest({ coordinates: [[start.lng, start.lat]], options: { round_trip: { length: Math.round(target), points: 4, seed: base + k } } }); }
+    catch (e) { if (!found.length && k === 0) throw e; continue; }
+    const seg = orsToSeg(f, useOrsAt(start) ? 'buiten' : 'osm');
+    const p = seg.coords[0];
+    found.push({ seq: [{ lat: p[0], lon: p[1] }, { lat: p[0], lon: p[1] }], legs: [seg], dist: seg.dist, dev: (seg.dist - target) / target, overlap: 0, score: Math.abs((seg.dist - target) / target) });
+    if (found.filter(c => Math.abs(c.dev) <= 0.1).length >= 3) break;
+  }
+  const good = found.filter(c => Math.abs(c.dev) <= 0.1).sort((a, b) => a.score - b.score);
+  return good.length ? good : found.sort((a, b) => Math.abs(a.dev) - Math.abs(b.dev)).slice(0, 1);
+}
 function applyLoop(c) {
   for (const wp of state.wps) map.removeLayer(wp.marker);
   state.wps = c.seq.map(s => { const wp = { lat: s.lat, lng: s.lon }; wp.marker = makeMarker(wp); return wp; });
-  state.segs = c.legs.map(r => ({ coords: r.coords, dist: r.dist, byCat: Object.assign({}, r.byCat), bySurf: Object.assign({}, r.bySurf), straight: false, source: 'osm' }));
+  state.segs = c.legs.map(r => ({ coords: r.coords, dist: r.dist, byCat: Object.assign({}, r.byCat), bySurf: Object.assign({}, r.bySurf), straight: false, source: r.source || 'osm', why: r.why }));
   refreshMarkers(); render(); save(); syncLoopUI();
   const all = []; state.segs.forEach(s => s.coords.forEach(p => all.push(p)));
   if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [30, 30], maxZoom: 16 });
