@@ -24,11 +24,30 @@ jobs:
           pip install osmium
       - name: OpenStreetMap-data ophalen en uitsnijden
         run: |
-          for p in friesland groningen drenthe; do
-            curl -fsSL -o $p.osm.pbf https://download.geofabrik.de/europe/netherlands/$p-latest.osm.pbf
-          done
-          osmium merge friesland.osm.pbf groningen.osm.pbf drenthe.osm.pbf -o merged.osm.pbf
-          osmium extract -s complete_ways -b "$(python maak_paden.py --bbox)" merged.osm.pbf -o regio.osm.pbf
+          BBOX="$(python maak_paden.py --bbox)"
+          UA="Afstand-app paden (GitHub Actions, maandelijks)"
+          haal() {
+            for url in "https://download.geofabrik.de/europe/netherlands/$1-latest.osm.pbf" \
+                       "https://download.openstreetmap.fr/extracts/europe/netherlands/$1-latest.osm.pbf"; do
+              echo "Ophalen: $url"
+              if curl -fL --retry 4 --retry-all-errors --retry-delay 15 --connect-timeout 30 -A "$UA" -o "$1.osm.pbf" "$url"; then return 0; fi
+              echo "Niet gelukt: $url"
+            done
+            return 1
+          }
+          if haal friesland && haal groningen && haal drenthe; then
+            osmium merge friesland.osm.pbf groningen.osm.pbf drenthe.osm.pbf -o merged.osm.pbf
+            osmium extract -s complete_ways -b "$BBOX" merged.osm.pbf -o regio.osm.pbf
+          else
+            echo "Downloadservers niet bereikbaar, nu via Overpass"
+            IFS=, read -r W S E N <<< "$BBOX"
+            Q="[out:xml][timeout:1800][maxsize:2000000000];way[\"highway\"]($S,$W,$N,$E);(._;>;);out body;"
+            for ep in https://overpass-api.de/api/interpreter https://overpass.private.coffee/api/interpreter; do
+              echo "Ophalen via $ep"
+              if curl -fL --retry 3 --retry-all-errors --retry-delay 60 -A "$UA" --data-urlencode "data=$Q" -o regio.osm "$ep"; then break; fi
+            done
+            osmium cat regio.osm -o regio.osm.pbf
+          fi
           osmium tags-filter regio.osm.pbf w/highway -o wegen.osm.pbf
       - name: Tegels maken
         run: python maak_paden.py wegen.osm.pbf paden/v1
