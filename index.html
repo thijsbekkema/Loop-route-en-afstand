@@ -358,7 +358,7 @@ button:focus-visible,input:focus-visible+i{outline:2px solid var(--fries);outlin
       Tik op een punt om het te verwijderen, sleep om het te verplaatsen.<br>
       <button class="link" id="clearCache">Opgeslagen kaartdata wissen</button></p>
     <p class="foot" id="regionNote" hidden></p>
-    <p class="version">Afstand · versie 1.12 · 25 november 2026</p>
+    <p class="version">Afstand · versie 1.13 · 25 november 2026</p>
   </div>
 </section>
 
@@ -571,16 +571,17 @@ class Graph {
     const coords = [coord(E)];
     const byCat = { pad: 0, fiets: 0, weg: 0, vrij: 0 }, bySurf = { verhard: 0, onverhard: 0, onbekend: 0 };
     let dist = 0, cur = E;
-    const edges = [], edgeDist = [];
+    const edges = [], edgeDist = [], edgeWay = [];
     while (cur !== S) {
       const [p, d, wi] = prev.get(cur);
       const w = this.ways[wi];
       dist += d; byCat[w.cat] += d; bySurf[w.surf] += d;
-      edges.push(p < cur ? p + '_' + cur : cur + '_' + p); edgeDist.push(d);
+      edges.push(p < cur ? p + '_' + cur : cur + '_' + p); edgeDist.push(d); edgeWay.push(wi);
       cur = p; coords.push(coord(cur));
     }
-    coords.reverse();
-    return { coords, dist, byCat, bySurf, edges, edgeDist };
+    // all arrays run from start to end; edge k lies between coords[k] and coords[k + 1]
+    coords.reverse(); edges.reverse(); edgeDist.reverse(); edgeWay.reverse();
+    return { coords, dist, byCat, bySurf, edges, edgeDist, edgeWay };
   }
 }
 
@@ -1548,15 +1549,51 @@ async function buildLoop(start, R, bearing) {
   for (const p of pts) { const s = graph.nearest(p[0], p[1]); if (!s || s.d > 900) return null; seq.push(s); }
   seq.push(s0);
   const f = factors(), minF = minFactor(state.mode, state), used = new Set(), legs = [];
-  let dist = 0, overlap = 0;
   for (let i = 0; i < 4; i++) {
     const r = graph.route(seq[i], seq[i + 1], f, minF, 600000, used, 3);
     if (!r) return null;
-    r.edges.forEach((k, j) => { if (used.has(k)) overlap += r.edgeDist[j]; });
     r.edges.forEach(k => used.add(k));
-    legs.push(r); dist += r.dist;
+    legs.push(r);
   }
-  return { seq, legs, dist, overlap: dist ? overlap / dist : 0, bearing };
+  // No dead-end detours: where the route goes into a side path to a turning point and comes back the same way,
+  // cut that part off and move the turning point to the junction.
+  for (let k = 0; k < 3; k++) trimSpur(legs[k], legs[k + 1]);
+  const out = [seq[0]];
+  for (let k = 0; k < 3; k++) { const p = legs[k].coords[legs[k].coords.length - 1]; out.push({ lat: p[0], lon: p[1] }); }
+  out.push(seq[4]);
+  let dist = 0, overlap = 0;
+  const seen = new Set();
+  for (const r of legs) {
+    dist += r.dist;
+    r.edges.forEach((k, j) => { if (seen.has(k)) overlap += r.edgeDist[j]; });
+    r.edges.forEach(k => seen.add(k));
+  }
+  return { seq: out, legs, dist, overlap: dist ? overlap / dist : 0, bearing };
+}
+const samePt = (p, q) => Math.abs(p[0] - q[0]) < 1e-7 && Math.abs(p[1] - q[1]) < 1e-7;
+function dropEdges(r, from, count) {
+  for (let e = from; e < from + count; e++) {
+    const w = graph.ways[r.edgeWay[e]], d = r.edgeDist[e];
+    r.dist -= d; r.byCat[w.cat] -= d; r.bySurf[w.surf] -= d;
+  }
+  r.edges.splice(from, count); r.edgeDist.splice(from, count); r.edgeWay.splice(from, count);
+}
+// Leg a ends at a turning point, leg b starts there. If b first retraces the last part of a, remove that part from both.
+function trimSpur(a, b) {
+  const ma = a.coords.length - 1;
+  let n = 0;
+  while (n < a.edgeDist.length - 1 && n < b.edgeDist.length - 1 && samePt(a.coords[ma - 1 - n], b.coords[1 + n])) n++;
+  if (!n) return;
+  dropEdges(a, a.edgeDist.length - n, n); a.coords.length -= n;
+  dropEdges(b, 0, n); b.coords.splice(0, n);
+}
+// Same idea for a loop that is only a list of coordinates (OpenRouteService): remove every U-turn.
+function trimCoordSpurs(coords) {
+  const out = coords.slice();
+  for (let i = 1; i < out.length - 1;) {
+    if (samePt(out[i - 1], out[i + 1])) { out.splice(i, 2); i = Math.max(1, i - 1); } else i++;
+  }
+  return out;
 }
 async function generateLoop(start, target) {
   const found = [], offset = Math.random() * 360;
@@ -1618,6 +1655,11 @@ async function orsLoops(start, target) {
     try { f = await orsRequest({ coordinates: [[start.lng, start.lat]], options: { round_trip: { length: Math.round(target), points: 4, seed: base + k } } }); }
     catch (e) { if (!found.length && k === 0) throw e; continue; }
     const seg = orsToSeg(f, useOrsAt(start) ? 'buiten' : 'osm');
+    const before = seg.dist;
+    seg.coords = trimCoordSpurs(seg.coords);
+    seg.dist = 0;
+    for (let q = 1; q < seg.coords.length; q++) seg.dist += hav(seg.coords[q - 1][0], seg.coords[q - 1][1], seg.coords[q][0], seg.coords[q][1]);
+    if (before > 0) { const s = seg.dist / before; for (const x in seg.byCat) seg.byCat[x] *= s; for (const x in seg.bySurf) seg.bySurf[x] *= s; }
     const p = seg.coords[0];
     found.push({ seq: [{ lat: p[0], lon: p[1] }, { lat: p[0], lon: p[1] }], legs: [seg], dist: seg.dist, dev: (seg.dist - target) / target, overlap: 0, score: Math.abs((seg.dist - target) / target) });
     if (found.filter(c => Math.abs(c.dev) <= 0.1).length >= 3) break;
